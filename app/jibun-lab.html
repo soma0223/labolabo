@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ジブンラボ｜自己分析×思考力トレーニング</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#faf8f4;--card:#fff;--ink:#23262b;--sub:#6b7078;--line:#e6e1d8;--ac:#2f6f5e;--acs:#e3f0eb;--warm:#fff3dc}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#16181b;--card:#202327;--ink:#eceae5;--sub:#9aa0a8;--line:#33373d;--ac:#6fc2a8;--acs:#243630;--warm:#3a3220}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif}
+.w{max-width:680px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:4px 0}h2{font-size:18px;margin:20px 0 8px}
+.sub{color:var(--sub);font-size:14px}
+.tabs{display:flex;gap:6px;margin:14px 0;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:6px 0;z-index:5}
+.tabs button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
+.tabs button.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border:1px solid var(--line);border-radius:99px;background:var(--card);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.chip.on{background:var(--acs);border-color:var(--ac);color:var(--ac);font-weight:600}
+textarea{width:100%;min-height:110px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+.btn{padding:12px 20px;border:0;border-radius:10px;background:var(--ac);color:var(--bg);font:inherit;font-weight:600;cursor:pointer;margin-top:10px}
+.btn.ghost{background:var(--acs);color:var(--ac)}.btn:disabled{opacity:.5}
+.q{background:var(--acs);border-radius:12px;padding:12px 14px;margin:10px 0;white-space:pre-wrap}
+.a{border-left:3px solid var(--line);padding:2px 12px;margin:10px 0;color:var(--sub);white-space:pre-wrap;font-size:15px}
+.out{white-space:pre-wrap;background:var(--warm);border-radius:12px;padding:14px;margin-top:10px}
+.hide{display:none}
+.note{font-size:13px;color:var(--sub);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>🧪 ジブンラボ</h1>
+  <div class="sub">自己分析の深掘り × 思考力トレーニング。就活の「なぜ?」に強くなる。</div>
+
+  <div class="tabs">
+    <button data-t="deep" class="on">自己分析</button>
+    <button data-t="train">思考トレ</button>
+    <button data-t="log">記録</button>
+  </div>
+  <div id="noai" class="card hide">⚠️ AI機能はclaude.ai上でページを開いたときに使えます。</div>
+
+  <!-- 自己分析 -->
+  <section id="deep">
+    <div class="card">
+      <b>テーマを選ぶ</b>
+      <div class="chips" id="themes" style="margin-top:8px"></div>
+      <div id="start" class="hide">
+        <div class="q" id="q0"></div>
+        <textarea id="a0" placeholder="思いつくまま、短くてOK"></textarea>
+        <button class="btn" id="go">深掘りスタート</button>
+      </div>
+    </div>
+    <div id="chat"></div>
+    <div id="reply" class="card hide">
+      <textarea id="ans" placeholder="答えを書く（具体的な出来事・数字・そのときの気持ちを）"></textarea>
+      <button class="btn" id="send">送信</button>
+      <button class="btn ghost" id="sum" disabled>ここまでをまとめる</button>
+      <div class="note" id="cnt"></div>
+    </div>
+    <div id="summary"></div>
+  </section>
+
+  <!-- 思考トレ -->
+  <section id="train" class="hide">
+    <div class="card">
+      <b>鍛えるスキル</b>
+      <div class="chips" id="skills" style="margin-top:8px"></div>
+    </div>
+    <div id="lesson" class="card hide"></div>
+    <div id="task" class="hide">
+      <div class="card">
+        <div class="q" id="tq"></div>
+        <textarea id="ta" placeholder="あなたの答え"></textarea>
+        <button class="btn" id="grade">採点してもらう</button>
+        <button class="btn ghost" id="next">別のお題</button>
+        <div class="out hide" id="fb"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 記録 -->
+  <section id="log" class="hide"><div id="logs"></div></section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let S=null;
+(async()=>{try{S=await window.claude.use("sample")}catch(e){}if(!S)$("#noai").classList.remove("hide")})();
+
+const store={
+  get(){try{return JSON.parse(localStorage.getItem("jl")||"[]")}catch(e){return[]}},
+  add(x){try{const a=store.get();a.unshift(x);localStorage.setItem("jl",JSON.stringify(a.slice(0,30)))}catch(e){}}
+};
+async function ai(prompt){
+  if(!S)throw new Error("AIが利用できません");
+  const r=await S(prompt,{cache:false});return r.text.trim();
+}
+
+/* タブ */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  ["deep","train","log"].forEach(id=>$("#"+id).classList.toggle("hide",id!==b.dataset.t));
+  if(b.dataset.t==="log")renderLog();
+});
+
+/* 自己分析 */
+const THEMES={
+  "学生時代に力を入れたこと":"学生時代、一番時間や熱量をかけたことは何ですか？まず思いつくままに。",
+  "自分の強み":"友人や周りから「あなたってこういう人だよね」と言われることは何ですか？",
+  "挫折・失敗経験":"うまくいかなかった経験で、今でも覚えているものを一つ教えてください。",
+  "志望動機・働く軸":"仕事選びで「これだけは譲れない」と感じるものは何ですか？",
+  "人生で大きな選択":"これまでで一番悩んで決めた選択は何ですか？"
+};
+let theme=null,log=[],busy=false;
+$("#themes").innerHTML=Object.keys(THEMES).map(t=>`<button class="chip">${t}</button>`).join("");
+$("#themes").onclick=e=>{
+  if(!e.target.classList.contains("chip"))return;
+  theme=e.target.textContent;
+  document.querySelectorAll("#themes .chip").forEach(c=>c.classList.toggle("on",c===e.target));
+  $("#q0").textContent=THEMES[theme];$("#start").classList.remove("hide");
+  log=[];$("#chat").innerHTML="";$("#summary").innerHTML="";$("#reply").classList.add("hide");
+};
+const transcript=()=>log.map(l=>`質問:${l.q}\n回答:${l.a}`).join("\n\n");
+function drawChat(pending){
+  $("#chat").innerHTML=log.map(l=>`<div class="q">${esc(l.q)}</div><div class="a">${esc(l.a)}</div>`).join("")+(pending?`<div class="q">${esc(pending)}</div>`:"");
+  $("#cnt").textContent=`${log.length}回 深掘り済み（5回以上でまとめられます）`;
+  $("#sum").disabled=log.length<5;
+}
+async function nextQ(){
+  busy=true;$("#send").disabled=true;$("#send").textContent="考え中…";
+  try{
+    const q=await ai(`あなたは就活生の自己分析を手伝う、親しみやすく鋭いキャリアコーチです。
+テーマ「${theme}」について、以下のやりとりを踏まえ、次の質問を1つだけ出してください。
+ルール：60字以内／相手の回答の具体的な言葉を拾う／「なぜそうしたか」「そのとき何を考えたか」「他の人と違った点」「結果を数字や事実で言うと」「そこから何を学んだか」など、まだ掘れていない角度を選ぶ／褒めすぎない／質問文だけを出力。
+
+${transcript()}`);
+    log[log.length-1].next=q;drawChat(q);
+    window.__q=q;
+  }catch(e){drawChat("（エラー）もう一度送信してください。");log.pop();}
+  busy=false;$("#send").disabled=false;$("#send").textContent="送信";
+}
+$("#go").onclick=async()=>{
+  const a=$("#a0").value.trim();if(!a||busy)return;
+  log=[{q:THEMES[theme],a}];$("#start").classList.add("hide");$("#reply").classList.remove("hide");
+  drawChat();await nextQ();
+};
+$("#send").onclick=async()=>{
+  const a=$("#ans").value.trim();if(!a||busy)return;
+  log.push({q:window.__q,a});$("#ans").value="";drawChat();await nextQ();
+};
+$("#sum").onclick=async()=>{
+  $("#sum").disabled=true;$("#sum").textContent="まとめ中…";
+  try{
+    const t=await ai(`就活生の自己分析の対話記録です。内容だけをもとに、次の形式で日本語で簡潔にまとめてください（事実にないことは書かない）。
+
+■強み（3つ）と、それを裏づける具体エピソード
+■根っこにある価値観・行動パターン
+■一貫したストーリー（この人は何を大事にし、どう動く人か：3文）
+■面接で追加で聞かれそうな質問（3つ）
+■90秒で話すPREP案（結論→理由→具体例→結論）
+
+テーマ：${theme}
+${transcript()}`);
+    $("#summary").innerHTML=`<h2>あなたの分析まとめ</h2><div class="out">${esc(t)}</div>`;
+    store.add({date:new Date().toLocaleDateString("ja-JP"),theme,text:t});
+  }catch(e){$("#summary").innerHTML=`<div class="card">まとめに失敗しました。もう一度試してください。</div>`;}
+  $("#sum").disabled=false;$("#sum").textContent="ここまでをまとめる";
+};
+
+/* 思考トレ */
+const SK={
+  "仮説思考":{l:"最初に仮の答えを置き、それを検証しながら進める考え方。情報が揃うのを待たず「たぶん〇〇が原因では？なぜなら△△」と先に結論を立てる。外れても、次の仮説が精度よく立てられる。",t:"原因分析や施策提案で「仮説→根拠→検証方法」を答えさせる"},
+  "MECE":{l:"Mutually Exclusive, Collectively Exhaustive。「モレなくダブりなく」分ける。分け方の軸（年代・地域・顧客/非顧客など）を先に決めると整理しやすい。",t:"ある課題を、軸を決めてMECEに分解させる"},
+  "ロジックツリー":{l:"課題を「原因」「手段」に枝分かれさせて分解する図。1階層ごとにMECEを意識し、最後は『今すぐ動ける粒度』まで落とす。",t:"売上・満足度などの目標を、ロジックツリー形式（階層の箇条書き）で分解させる"},
+  "PREP法":{l:"Point（結論）→Reason（理由）→Example（具体例）→Point（結論）の順で話す型。ESや面接で「結論から話して」に応える基本形。",t:"身近なテーマで、PREP法で90秒程度の回答をさせる"},
+  "フェルミ推定":{l:"正確な数字が分からない量を、分解と仮置きで概算する。「何を掛け算で分けるか」と「各数字の根拠のある仮定」が評価される。",t:"街や身の回りの市場規模・台数などを推定させる"}
+};
+let sk=null,cur="";
+$("#skills").innerHTML=Object.keys(SK).map(k=>`<button class="chip">${k}</button>`).join("");
+$("#skills").onclick=e=>{
+  if(!e.target.classList.contains("chip"))return;
+  sk=e.target.textContent;
+  document.querySelectorAll("#skills .chip").forEach(c=>c.classList.toggle("on",c===e.target));
+  $("#lesson").innerHTML=`<b>${sk}とは</b><p>${esc(SK[sk].l)}</p><button class="btn" id="mk">お題を出してもらう</button>`;
+  $("#lesson").classList.remove("hide");$("#task").classList.add("hide");
+  $("#mk").onclick=newTask;
+};
+async function newTask(){
+  const b=$("#mk")||$("#next");b.disabled=true;
+  try{
+    cur=await ai(`就活生向けの思考力トレーニングです。スキル「${sk}」を鍛えるお題を日本語で1問だけ出してください。
+方針：${SK[sk].t}。就活や日常で想像しやすい題材で、回答は5分以内に書ける難易度。毎回違う題材にする（乱数:${Math.random().toString(36).slice(2,6)}）。お題の文章だけを出力。`);
+    $("#tq").textContent=cur;$("#ta").value="";$("#fb").classList.add("hide");$("#task").classList.remove("hide");
+  }catch(e){$("#tq").textContent="お題の取得に失敗しました。もう一度押してください。";$("#task").classList.remove("hide");}
+  b.disabled=false;
+}
+$("#next").onclick=newTask;
+$("#grade").onclick=async()=>{
+  const a=$("#ta").value.trim();if(!a)return;
+  $("#grade").disabled=true;$("#grade").textContent="採点中…";
+  try{
+    const t=await ai(`あなたは就活生を鍛える思考力トレーナーです。スキル「${sk}」のお題への回答を採点してください。
+形式：
+■スコア（100点満点）と一言
+■良い点（1〜2つ）
+■惜しい点（1〜2つ）
+■こう直すとさらに良くなる改善例（短く）
+厳しすぎず、でも甘やかさず、具体的に。
+
+お題：${cur}
+回答：${a}`);
+    $("#fb").textContent=t;$("#fb").classList.remove("hide");
+  }catch(e){$("#fb").textContent="採点に失敗しました。もう一度試してください。";$("#fb").classList.remove("hide");}
+  $("#grade").disabled=false;$("#grade").textContent="採点してもらう";
+};
+
+/* 記録 */
+function renderLog(){
+  const a=store.get();
+  $("#logs").innerHTML=a.length?a.map(x=>`<div class="card"><b>${esc(x.theme)}</b> <span class="sub">${esc(x.date)}</span><div class="out">${esc(x.text)}</div></div>`).join(""):`<div class="card sub">まだ記録がありません。自己分析をまとめるとここに残ります（この端末のみ）。</div>`;
+}
+</script>
+</body>
+</html>
