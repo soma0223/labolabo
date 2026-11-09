@@ -1,0 +1,929 @@
+<title>ジブンラボ v3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;600&display=swap">
+<style>
+/* 実験ノート：方眼の紙に、証拠は蛍光ペン、判定は段階スタンプ。左に工程のレール、右に作業面。中心に2つの記録 */
+:root{
+  --paper:#f5f7fa; --grid:#e3e8f0; --sheet:#ffffff; --ink:#1c2333; --muted:#5d6678;
+  --rule:#d5dbe5; --accent:#2a54b8; --accent-soft:#e6ecfa; --mark:#fff0a0; --mark-ink:#5a4a00;
+  --ok:#1f7a4d; --ok-soft:#e1f3e9; --warn:#a15c00; --warn-soft:#fbeedb; --bad:#b3261e; --bad-soft:#fbe4e2;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-code:"M PLUS 1 Code","Hiragino Sans","Noto Sans Mono",ui-monospace,monospace;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:36px;
+  --t-xs:12px;--t-s:14px;--t-m:16px;--t-l:19px;--t-xl:24px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#12161d; --grid:#1b212b; --sheet:#181d26; --ink:#e7ebf2; --muted:#9aa4b5;
+  --rule:#2c3441; --accent:#8fb0ff; --accent-soft:#1f2a44; --mark:#5a4d12; --mark-ink:#fff0b0;
+  --ok:#6fd39f; --ok-soft:#173326; --warn:#f0b35c; --warn-soft:#3a2b14; --bad:#ff8a80; --bad-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#12161d; --grid:#1b212b; --sheet:#181d26; --ink:#e7ebf2; --muted:#9aa4b5;
+  --rule:#2c3441; --accent:#8fb0ff; --accent-soft:#1f2a44; --mark:#5a4d12; --mark-ink:#fff0b0;
+  --ok:#6fd39f; --ok-soft:#173326; --warn:#f0b35c; --warn-soft:#3a2b14; --bad:#ff8a80; --bad-soft:#3d1c1a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:var(--t-m)/1.75 var(--f-body);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:var(--s4) 64px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.35}
+h1{font-size:var(--t-xl);font-weight:700;letter-spacing:.02em}
+h2{font-size:var(--t-l);font-weight:700}
+h3{font-size:var(--t-m);font-weight:700}
+p{margin:0}
+.code{font-family:var(--f-code);font-size:var(--t-xs);letter-spacing:.06em;color:var(--muted)}
+.wrap{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:var(--s5)}
+header.top{max-width:1040px;margin:0 auto var(--s4);display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--s3)}
+header.top .lead{color:var(--muted);font-size:var(--t-s)}
+.aware{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.aware .dot{width:22px;height:22px;border-radius:6px;border:1px solid var(--rule);display:grid;place-items:center;font:600 11px var(--f-code);background:var(--sheet);color:var(--muted)}
+.aware .dot.l2{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.aware .dot.l3{background:var(--accent);color:var(--sheet);border-color:var(--accent)}
+nav.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);align-self:start;display:flex;flex-direction:column;gap:2px}
+nav.rail .grp{font:600 11px var(--f-code);letter-spacing:.1em;color:var(--muted);margin:var(--s3) 0 var(--s1) var(--s2)}
+nav.rail button{all:unset;cursor:pointer;display:flex;align-items:center;gap:var(--s2);padding:7px var(--s2);border-radius:8px;font-size:var(--t-s)}
+nav.rail button:hover{background:var(--accent-soft)}
+nav.rail button.on{background:var(--sheet);box-shadow:inset 0 0 0 1px var(--rule);font-weight:700}
+nav.rail button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.rail .n{font:600 11px var(--f-code);width:28px;color:var(--muted)}
+nav.rail .st{margin-left:auto;font:600 11px var(--f-code);color:var(--ok)}
+main{min-width:0;display:flex;flex-direction:column;gap:var(--s4)}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:12px;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.sheet.flat{background:transparent;border:0;padding:0}
+.why{border-left:3px solid var(--accent);background:var(--accent-soft);padding:var(--s3) var(--s4);border-radius:0 8px 8px 0;font-size:var(--t-s)}
+.why b{display:block;font:600 11px var(--f-code);letter-spacing:.1em;color:var(--accent);margin-bottom:2px}
+.note{font-size:var(--t-s);color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
+.btn{all:unset;cursor:pointer;padding:10px 18px;border-radius:9px;background:var(--accent);color:var(--sheet);font-weight:700;font-size:var(--t-s);text-align:center}
+.btn.sub{background:var(--accent-soft);color:var(--accent)}
+.btn.line{background:transparent;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink)}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea,input[type=text],select{width:100%;padding:10px 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink);font:inherit;font-size:var(--t-m)}
+textarea{min-height:96px;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:var(--t-s);font-weight:500}
+.chip{all:unset;cursor:pointer;padding:6px 12px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--rule);font-size:var(--t-s);background:var(--sheet)}
+.chip.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent);font-weight:700}
+.lv{display:inline-flex;align-items:center;gap:4px;font:600 12px var(--f-code);padding:2px 8px;border-radius:6px;border:1px solid var(--rule);white-space:nowrap}
+.lv.l0,.lv.l1{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.lv.l2{color:var(--ok);background:var(--ok-soft);border-color:transparent}
+.lv.l3{color:var(--sheet);background:var(--ok);border-color:transparent}
+.tag{font:600 11px var(--f-code);padding:1px 7px;border-radius:5px;background:var(--paper);border:1px solid var(--rule);color:var(--muted);white-space:nowrap}
+mark{background:var(--mark);color:var(--mark-ink);padding:0 3px;border-radius:3px}
+.q{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:var(--s3) var(--s4);white-space:pre-wrap}
+.a{padding:var(--s2) var(--s4);border-left:3px solid var(--rule);white-space:pre-wrap;color:var(--ink)}
+.judge{font-size:var(--t-s);display:flex;flex-direction:column;gap:6px;padding:var(--s3) var(--s4);border-radius:10px;background:var(--paper)}
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:var(--t-s)}
+th,td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+th{font:600 12px var(--f-code);color:var(--muted);background:var(--paper);letter-spacing:.04em;white-space:nowrap}
+td input{min-width:120px;padding:6px 8px;font-size:var(--t-s)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s3)}
+.card{border:1px solid var(--rule);border-radius:10px;padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:6px;background:var(--sheet);min-width:0}
+.card.pick{cursor:pointer}.card.pick:hover{border-color:var(--accent)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.stmt{border:1px solid var(--rule);border-radius:10px;padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:8px}
+.stmt .k{font:600 12px var(--f-code);color:var(--accent);letter-spacing:.06em}
+.ev{font-size:var(--t-s)}
+.ev li{margin:2px 0}
+ul{margin:0;padding-left:1.2em}
+.banner{padding:var(--s3) var(--s4);border-radius:10px;font-size:var(--t-s);background:var(--warn-soft);color:var(--warn)}
+.ok-banner{padding:var(--s3) var(--s4);border-radius:10px;font-size:var(--t-s);background:var(--ok-soft);color:var(--ok)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.opt{border:1px solid var(--rule);border-radius:10px;padding:var(--s4);cursor:pointer;background:var(--sheet)}
+.opt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:760px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  nav.rail{align-items:center}
+  nav.rail .code{flex:0 0 auto;white-space:nowrap;margin:0 8px!important}
+  nav.rail .code br{display:none}
+  nav.rail .grp{display:none}
+  nav.rail button{flex:0 0 auto;white-space:nowrap}
+  nav.rail .st{margin-left:4px}
+  .sheet{padding:var(--s4)}
+  .split{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+
+<header class="top">
+  <div>
+    <div class="code">JIBUN LAB · v3</div>
+    <h1>ジブンラボ</h1>
+    <p class="lead">企業が何をどう見ているかを知り、自分についての仮説を、試しながら確かめていく就活の実験ノート。</p>
+  </div>
+  <div>
+    <div class="code" style="margin-bottom:4px">自覚の6項目</div>
+    <div class="aware" id="awareBar"></div>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="rail" id="rail" aria-label="工程"></nav>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ============ 基本 ============ */
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const today=()=>new Date().toLocaleDateString("ja-JP");
+
+/* ============ 設計の中身（設計メモ 11章・12章） ============ */
+const AWARE=[
+  {k:1,name:"企業は見えないものを推し量っている"},
+  {k:2,name:"何が証拠になるか"},
+  {k:3,name:"企業が最終的に見たいもの"},
+  {k:4,name:"設問・選考の手段ごとの意図"},
+  {k:5,name:"深掘りの意味"},
+  {k:6,name:"自分が会社に求めるもの"}
+];
+const AWARE_TEXT={
+ 1:"企業は学生の中身を直接見られません。ES・適性検査・グループ討議・面接・インターンという手段で、見えるものから推し量っています。",
+ 2:"誰でも言える言葉（「頑張りました」「主体性があります」）は区別の役に立ちません。信用されるのは、手間をかけた具体的な行動です。生成AIで文章が誰でも整えられる今は、文章のうまさも差になりません。",
+ 3:"日本の新卒採用では、多くの会社が入社後に育てる前提で採ります。そのため、今のスキルより「育てれば伸びるか」と「組織に合い、長く働けるか」を重く見ます。"
+};
+const LEVEL_NAME=["表面","言葉だけ","説明できる","使える"];
+const AREAS=["学業・ゼミ","部活・サークル","アルバイト","インターン","趣味・その他"];
+const PERIODS=["高校","大学1年","大学2年","大学3年","今"];
+const CUES=[
+  {k:"choose",t:"自分で決めた・やり方を変えたこと"},
+  {k:"fail",t:"思ったとおりにいかなかったこと"},
+  {k:"grow",t:"できるようになったこと・ならなかったこと"},
+  {k:"same",t:"別の場所でも同じようなことをしていた"},
+  {k:"long",t:"時間や手間をかけ続けたこと"}
+];
+const NOMEM="（覚えていなければ、「覚えていない」で大丈夫です）";
+/* 深掘り（12.31の質問文。1問ずつ順に出す） */
+const STEPS=[
+ {id:"m0",ep:"main",title:"そのときを思い浮かべる",cand:null,
+  qs:["その出来事は、いつ頃、どこでのことでしたか。","そのとき一緒にいたのは、誰でしたか。","写真やメッセージ、作ったものなど、そのときのことが分かるものは残っていますか。"+NOMEM],
+  why:"細かいことは、そのときの場所・人・残っているものを思い浮かべ直すと出てきやすくなります。ここは判定しません。"},
+ {id:"m1",ep:"main",title:"何をしたか",cand:1,gate:true,
+  qs:["そのとき、あなたがしたことを、思い出せる順に書いてください。"],
+  follow:{a:"それは、あなたがしたことですか。周りの人がしたことですか。",b:"実際には、どんなことをしたのですか。動きが分かるように教えてください。",c:"何人くらいの、どんな集まりの中でのことでしたか。",d:"それを、どのくらいの期間続けましたか。",e:"その結果、何がどう変わりましたか。数で分かることはありますか。"},
+  goal:"主語があなたで、具体的な動きと状況が分かること（段階2）。手間と確かめられる結果まであれば段階3。",
+  why:"企業は「頑張った」という言葉ではなく、具体的な行動を証拠として見ています。",
+  rubric:"特徴:(a)主語が自分 (b)具体的な動き(「頑張った」でなく「毎週〜を〜した」) (c)状況が特定できる(いつ・どこで・誰と・規模) (d)手間が分かる(期間・量・困難) (e)確かめられる結果(数字・前後比較・第三者の反応)。段階0=抽象語だけ／1=行動はあるが状況か主語があいまい／2=(a)(b)(c)がそろう／3=さらに(d)(e)"},
+ {id:"m2",ep:"main",title:"本人の選択か",cand:2,
+  qs:["そのやり方に決める前に、ほかにどんなやり方が考えられましたか。","その中から、そのやり方を選んだ決め手は何でしたか。","そのとき、あなたが決めたことと、最初から決まっていたことは、それぞれ何でしたか。"],
+  goal:"ほかの選択肢と、選んだ決め手があること（段階2）。環境が決めた部分と自分が決めた部分を分けられれば段階3。",
+  why:"企業は、それがあなたの選択だったのか、環境や指示のおかげだったのかを見ています。面接の「環境のおかげでは？」という深掘りに耐えるための材料です。",
+  rubric:"特徴:(a)他の選択肢があったことが分かる (b)選んだ決め手が言える (c)自発か指示かが分かる (d)環境が決めた部分と自分が決めた部分を分けて語れる。段階0=役割として語るだけ／1=自分で決めたと言うが他の選択肢が見えない／2=他の選択肢と決め手がある／3=さらに環境が決めた部分と分けている"},
+ {id:"m3",ep:"main",title:"思ったとおりにいかなかったこと",cand:4,
+  qs:["その中で、思ったとおりにいかなかったことは何でしたか。","そうなった原因は、何だったと思いますか。","そのあと、何を変えましたか。変えてどうなりましたか。","うまくいかなかったとき、気持ちはどうでしたか。どうやって持ち直しましたか。"],
+  goal:"原因を、自分で変えられる部分（やり方・判断・準備）に置けていること（段階2）。次に変えた行動と結果まであれば段階3。",
+  why:"企業は、失敗の原因をどこに置くかで、次に伸びる人かを見ています。持ち直し方は、ストレス耐性の手がかりになります。",
+  rubric:"特徴:(a)失敗が具体的 (b)原因が内的かつ変えられるもの (c)外的要因も認めたうえで自分の部分を切り出している (d)次に何を変え、どうなったか (e)気持ちの持ち直し方。段階0=失敗を語らないか外的な原因だけ／1=内的だが変えられない原因(性格など)／2=内的で変えられる原因／3=さらに次に変えた行動と結果"},
+ {id:"m4",ep:"main",title:"伸びた環境と伸び方",cand:7,
+  qs:["そのとき力を出せたのは、周りにどんな条件があったからだと思いますか。（任される範囲、反応が返ってくる早さ、一緒にいた人、など）","その経験の前と後で、できるようになったことは何ですか。どうやってできるようになりましたか。","反対に、力が出なかった場面を思い出せますか。そのときと比べて、何が違いましたか。"+NOMEM],
+  goal:"具体的な環境の条件と、伸び方の過程が言えること（段階2）。伸びなかった場面と比べて条件を絞れれば段階3。",
+  why:"企業は、あなたがどんな環境でどう伸びるかを知り、自社でも同じことが起きるかを見ています。日本の新卒採用では特に重く見られます。",
+  rubric:"特徴:(a)力を発揮した環境の要素を具体的に挙げられる (b)伸び方の過程が言える (c)伸びなかった環境と比べて条件を絞り込めている。段階0=環境に触れない／1=「人に恵まれた」など一般的な言葉／2=具体的な環境の要素と伸び方の過程がある／3=さらに伸びなかった環境との比較で条件を絞れている"},
+ {id:"m5",ep:"main",title:"大事にしていること",cand:3,
+  qs:["さっき話してくれた決め手は、あなたにとって、どんな点で大事でしたか。","それが大事だと思うようになったのは、いつ頃の、どんな経験からですか。"],
+  goal:"その人らしい価値観まで届くこと（段階2）。その価値観ができた経験まであれば段階3。",
+  why:"価値観は、事実を聞き終えてから聞きます。先に価値観を言うと、その後の話がそれに合うように整えられてしまうからです。",
+  rubric:"特徴:(a)理由が行動の言い換えでない (b)「どんな点で大事か」を2段以上上れる (c)行き着いた価値観にその人らしい具体性がある(誰でも言える言葉で終わらない) (d)その価値観ができた経験が言える。段階0=理由がないか言い換え／1=1段の理由／2=その人らしい価値観まで届く／3=さらに由来の経験がある"},
+ {id:"s0",ep:"sub",title:"2つ目：そのときを思い浮かべる",cand:null,
+  qs:["2つ目の出来事は、いつ頃、どこでのことでしたか。","そのとき一緒にいたのは、誰でしたか。"],
+  why:"1つ目と同じく、思い出す土台です。ここは判定しません。"},
+ {id:"s1",ep:"sub",title:"2つ目：何をしたか",cand:1,
+  qs:["2つ目の出来事で、あなたがしたことを、思い出せる順に書いてください。"],
+  follow:{a:"それは、あなたがしたことですか。周りの人がしたことですか。",b:"実際には、どんなことをしたのですか。",c:"何人くらいの、どんな集まりの中でのことでしたか。",d:"どのくらいの期間続けましたか。",e:"その結果、何がどう変わりましたか。"},
+  goal:"主語・具体的な動き・状況がそろうこと（段階2）。",
+  why:"2つ目は、場面が違っても同じ動き方が出るかを確かめる材料です。",
+  rubric:"特徴:(a)主語が自分 (b)具体的な動き (c)状況が特定できる (d)手間 (e)確かめられる結果。段階0=抽象語だけ／1=行動はあるが状況か主語があいまい／2=(a)(b)(c)がそろう／3=さらに(d)(e)"},
+ {id:"p1",ep:"both",title:"2つに共通する動き方",cand:5,
+  qs:["2つの出来事で、あなたの動き方に似ているところはありますか。","その動き方が出なかった場面はありますか。そのときは、何が違いましたか。"+NOMEM],
+  goal:"違う場面で、行動のレベルで共通点が言えること（段階2）。出なかった場面とその違いまであれば段階3。",
+  why:"企業は「いつもそうなのか、たまたまか」を見ています。出なかった場面は、強みが使える範囲と弱みを教えてくれます。",
+  rubric:"特徴:(a)2つ以上の別の出来事 (b)共通点が行動のレベル (c)場面が違うのに同じパターン (d)出なかった場面とその違い。段階0=出来事が1つだけ／1=共通点が抽象的／2=違う場面で行動レベルの共通点がある／3=さらに出なかった場面とその違い"},
+ {id:"p2",ep:"both",title:"大事にしていることと行動",cand:6,
+  qs:["大事にしていることに沿って動いた場面を、2つの出来事の中から1つずつ挙げてください。","そのために、何かをあきらめたことはありますか。","反対に、大事にしていることと合わない動き方をしたことはありますか。"],
+  goal:"価値観に沿った具体的な行動があること（段階2）。そのために何かをあきらめた選択があれば段階3。",
+  why:"言葉だけの価値観は誰でも言えます。何かをあきらめてまで選んだ行動があると、本物だと伝わります。",
+  rubric:"特徴:(a)語った価値観に沿った具体的行動 (b)その価値観のために何かを諦めた選択 (c)食い違う行動を自覚して説明できる (d)つながりが後付けでない。段階0=価値観だけ／1=行動はあるがつながりが弱い／2=価値観に沿った具体的行動がある／3=さらに価値観のために何かを諦めた選択がある"}
+];
+const TYPES=[
+ {k:"A",t:"行動のパターン",form:"私は（どんな場面）では、（どう動く）"},
+ {k:"B",t:"大事にしていること",form:"私は（何）を大事にしている。そう思うようになったのは（どんな経験）から"},
+ {k:"C",t:"伸びる条件と伸び方",form:"私は（どんな環境）で、（どういうやり方で）伸びる"},
+ {k:"D",t:"つまずき方と立て直し方",form:"私は（どんなとき）につまずきやすく、（どうやって）立て直してきた"}
+];
+const CERT=["1つの場面だけ","2つの場面で確認","他人も確認"];
+/* 面接の深掘り6種類と、崩れないために必要な段階（目標線、12.29） */
+const PROBES=[
+ {k:"data",t:"データ",ex:"具体的には？数字で言うと？",need:"候補1が段階3"},
+ {k:"warrant",t:"論拠",ex:"それはあなたの力？環境のおかげでは？",need:"候補2が段階3、候補5が段階2"},
+ {k:"qual",t:"限定",ex:"いつもそうなの？うまくいかなかった場面は？",need:"候補5が段階3"},
+ {k:"rebut",t:"反論",ex:"それと合わない行動をしたことは？",need:"候補6が段階2以上"},
+ {k:"reason",t:"理由",ex:"なぜそれを選んだの？",need:"候補3が段階2以上"},
+ {k:"situ",t:"状況",ex:"入社後に似た場面があったら、どうする？",need:"候補7が段階2以上"}
+];
+const PERSONAS=[
+ {k:"str1",t:"一次・型が決まった面接官",d:"決まった質問を順に聞き、具体的な行動を確かめる"},
+ {k:"cas1",t:"一次・雑談的な面接官",d:"話の流れで聞き、印象で判断しがち"},
+ {k:"two",t:"二次面接官",d:"深掘りが多く、組織に合うかを見る"},
+ {k:"fin",t:"最終面接官（役員）",d:"意欲と価値観が会社の考えと合うかを見る"}
+];
+const QUESTIONS=[
+ {k:"gaku",t:"ガクチカ",intent:"経験の中で、困難にどう向き合い、どう考えて動く人か。学ぶ速さと性質、何に力を注ぐことを選んだか。",dir:"出来事 → 自分",parts:["【必】何に取り組んだか（一文）","状況","【必】自分が選んだことと行動","困難と立て直し","【必】結果","そこから分かる自分"]},
+ {k:"pr",t:"自己PR",intent:"強みが入社後の仕事でも再現されるか（強みと再現性）。",dir:"強み → 出来事",parts:["【必】強み（場面つきで一文）","【必】それを示す行動","別の場面でも出たこと（再現性）","入社後どう活きるか"]},
+ {k:"sw",t:"強み・弱み",intent:"性質と、その限界を自覚しているか。",dir:"主張 → 出来事",parts:["【必】強み","根拠の行動","【必】弱み（強みが出ない場面、またはつまずき方）","【必】立て直し方とその結果"]},
+ {k:"fail",t:"挫折経験",intent:"ストレス耐性、逃げないか、原因の分析と次の行動。挫折の大きさは見ていない。",dir:"出来事 → 自分",parts:["【必】何がうまくいかなかったか","原因をどこに置いたか","気持ちの持ち直し方","【必】次に変えた行動と結果","そこから分かる自分"]},
+ {k:"team",t:"チームで取り組んだ経験",intent:"集団の中で、性質がどう出るか（周囲への貢献）。",dir:"出来事 → 自分",parts:["【必】集団の中での自分の役割","他の人との関わり","【必】結果","集団の場面での動き方"]},
+ {k:"moti",t:"志望動機",intent:"入社意欲が本物か、長く働くか、企業研究の深さ、これまでの経験との一貫性。",dir:"自分×会社",parts:["【必】なぜこの会社か（一文）","【必】自分の側の根拠（大事にしていることと、その由来の経験）","【必】会社の側の根拠（確かめた情報と出どころ）","なぜ他の会社ではなくここか","入社後どう伸び、どう役立つか"],needsCo:true},
+ {k:"future",t:"入社後にやりたいこと",intent:"やりたいことが価値観とつながっているか、その会社で実際にできる道筋が見えているか。",dir:"自分×会社",parts:["【必】やりたいこと","【必】この会社の具体的な仕事や制度でどう実現できるか","自分の伸び方がそこでどう活きるか","最初の数年で取り組むこと"],needsCo:true}
+];
+const FITS=["価値観の適合","ニーズと供給の適合","要求と能力の適合"];
+const SOURCES=["","採用ページ","説明会","社員の話","インターンの体験","面接の逆質問","口コミ"];
+const HARD_SOURCES=["社員の話","インターンの体験","面接の逆質問"];
+const SKILLS={
+ "仮説思考":{l:"最初に仮の答えを置き、それを確かめながら進める。情報がそろうのを待たず「たぶん〇〇が原因では？なぜなら△△」と先に結論を立てる。",t:"原因分析や施策提案で「仮説→根拠→確かめ方」を答えさせる"},
+ "MECE":{l:"モレなく、ダブりなく分ける。分け方の軸を先に決めると整理しやすい。",t:"ある課題を、軸を決めてMECEに分解させる"},
+ "ロジックツリー":{l:"課題を原因や手段に枝分かれさせて分解する。最後は今すぐ動ける粒度まで落とす。",t:"目標を、階層の箇条書きで分解させる"},
+ "PREP法":{l:"結論→理由→具体例→結論の順で話す型。面接の最初の一文が答えになっているか、と同じ考え方。",t:"身近なテーマで、PREP法で90秒程度の回答をさせる"},
+ "フェルミ推定":{l:"正確な数字が分からない量を、分解と仮置きで概算する。",t:"身の回りの市場規模・台数などを推定させる"},
+ "グループ討議の進め方":{l:"グループ討議で一人でも練習できるのは、考える部分です。論点を整理する、議論の進め方を決める、時間内に結論を出す。",t:"6人・20分のグループ討議のお題を出し、論点の整理、議論の順番、結論の出し方を書かせる"}
+};
+const VIEWS=[
+ {g:"自覚",k:"intro",t:"はじめに"},
+ {g:"自覚",k:"guide",t:"企業の見方"},
+ {g:"材料",k:"recall",t:"過去を掘り起こす"},
+ {g:"材料",k:"deep",t:"深掘り"},
+ {g:"材料",k:"log",t:"日々の記録"},
+ {g:"材料",k:"others",t:"他人の見方"},
+ {g:"記録",k:"self",t:"自分の記録"},
+ {g:"記録",k:"co",t:"企業の記録"},
+ {g:"使う",k:"es",t:"ES"},
+ {g:"使う",k:"iv",t:"面接"},
+ {g:"使う",k:"intern",t:"インターン"},
+ {g:"使う",k:"tests",t:"適性検査・GD"},
+ {g:"育てる",k:"grow",t:"育てる"},
+ {g:"育てる",k:"train",t:"思考トレ"},
+ {g:"伸び",k:"growth",t:"伸びの記録"}
+];
+
+/* ============ 状態と保存 ============ */
+const blank=()=>({v:3,view:"intro",
+  aware:Object.fromEntries(AWARE.map(a=>[a.k,{level:0}])),
+  intro:{pick:null,why:"",goal:"",done:false,fb:""},
+  grid:{},cands:[],main:null,sub:null,deep:{},
+  claims:[],gaps:[],story:"",others:[],logs:[],
+  criteria:{must:"",nice:"",deadline:""},companies:[],
+  es:{_sel:null},practice:[],pcur:null,pset:{mode:"deep",persona:"str1",claim:""},
+  interns:[],grow:null,growCtx:"",history:[],checks:[],reactions:[],
+  train:{sk:null,task:"",ans:"",fb:""}});
+let S=blank();
+let DOC=null,saveTimer=null,saving=false,saveAgain=false,storeMode="local",AI=null,busy=false;
+function lsGet(){try{return JSON.parse(localStorage.getItem("jl3")||"null")}catch(e){return null}}
+function lsSet(){try{localStorage.setItem("jl3",JSON.stringify(S))}catch(e){}}
+function persist(){lsSet();if(!DOC)return;clearTimeout(saveTimer);saveTimer=setTimeout(flush,1200)}
+async function flush(){if(saving){saveAgain=true;return}saving=true;try{await DOC.set({state:JSON.stringify(S),at:Date.now()})}catch(e){}saving=false;if(saveAgain){saveAgain=false;flush()}}
+function merge(x){const b=blank();x=x||{};return Object.assign(b,x,{aware:Object.assign(b.aware,x.aware||{}),criteria:Object.assign(b.criteria,x.criteria||{}),es:Object.assign(b.es,x.es||{}),pset:Object.assign(b.pset,x.pset||{})})}
+const local=lsGet();if(local)S=merge(local);
+(async()=>{
+  await null;
+  try{
+    const [sample,db,user]=await Promise.all([claude.use("sample"),claude.use("db"),claude.use("user")]);
+    AI=sample;
+    if(db&&user){const id=await user.id();if(id){DOC=db.collection("data/users/"+id).doc("jibunlab3");
+      try{const snap=await Promise.race([DOC.get(),new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),10000))]);
+        if(snap.exists){const d=snap.data();if(d&&d.state){S=merge(JSON.parse(d.state));lsSet()}}storeMode="cloud"}catch(e){DOC=null}}}
+  }catch(e){}
+  render();
+})();
+
+/* ============ AI ============ */
+const SYS="あなたは就活生の自己分析を支える、厳密で誠実なコーチです。事実にないことは書かない。本人の言葉をなるべくそのまま拾う。人柄を評価する言葉（〜な人、〜がない人）は使わず、書かれている行動と、足りない事実について述べる。判定は回答の表面に書かれている特徴だけで行い、根拠を回答から短く引用する。誘導しない。答えの例や望ましい答えを示さない。やさしい言葉で、短い文で書く。";
+async function aiJSON(p,tier){if(!AI)throw new Error("noai");return await AI.json(SYS+"\n\n"+p,{modelTier:tier||"default",cache:false})}
+async function aiText(p){if(!AI)throw new Error("noai");const r=await AI(SYS+"\n\n"+p,{cache:false});return r.text.trim()}
+function aiErr(e){
+  if(e&&e.code==="not_granted")return "AIの利用が許可されていません。手動で進められます。";
+  if(e&&e.code==="rate_limited")return "AIが混み合っています。少し待ってから、もう一度押してください。";
+  if(e&&e.message==="noai")return "AIは、claude.aiでこのページを開いたときに使えます。手動で進められます。";
+  return "AIの応答を受け取れませんでした。もう一度押してください。";
+}
+let NOTE="";
+function note(t){NOTE=t}
+
+/* ============ 共通の部品 ============ */
+const lv=n=>n==null?'<span class="lv">未判定</span>':`<span class="lv l${n}">段階${n}</span>`;
+const why=(l,t)=>`<div class="why"><b>${esc(l)}</b>${esc(t)}</div>`;
+const ep=id=>S.cands.find(c=>c.id===id);
+const tags=c=>`<span class="tag">${esc(c.period||"")}</span><span class="tag">${esc(c.area||"")}</span><span class="tag">${c.group?"集団":"1人"}</span>${c.src==="log"?'<span class="tag">日々の記録から</span>':""}`;
+const spin=()=>busy?'<span class="spin"></span>':"";
+function setAware(k,l){l=Math.max(0,Math.min(3,l|0));if(l>S.aware[k].level)S.aware[k]={level:l}}
+function hist(what,whyText){S.history.unshift({date:today(),what,why:whyText||""})}
+function deepText(){return STEPS.map(s=>{const d=S.deep[s.id];if(!d||!d.msgs.length)return "";return `【${s.title}】\n`+d.msgs.map(m=>`問:${m.q}\n答:${m.a}`).join("\n")}).filter(Boolean).join("\n\n")}
+function claimsText(){return S.claims.length?S.claims.map((c,i)=>`#${i+1} ${c.type} ${c.claim}（事実: ${(c.data||[]).join(" / ")}／${CERT[c.cert]||""}）`).join("\n"):"（自分の記録はまだありません）"}
+function candLevel(n){const s=STEPS.filter(x=>x.cand===n);let m=null;s.forEach(x=>{const d=S.deep[x.id];if(d&&d.level!=null)m=Math.max(m??0,d.level)});return m}
+function probeOk(c){return PROBES.every(p=>((c.probes||{})[p.k]??-1)>=2)}
+
+/* ============ 描画 ============ */
+function render(){
+  $("#awareBar").innerHTML=AWARE.map(a=>{const l=S.aware[a.k].level;return `<span class="dot l${l}" title="${esc(a.name)}：段階${l}（${LEVEL_NAME[l]}）">${a.k}</span>`}).join("")+`<span class="code" style="margin-left:6px">${AWARE.filter(a=>S.aware[a.k].level>=2).length}/6</span>`;
+  let g="";
+  $("#rail").innerHTML=VIEWS.map(v=>{let h="";if(v.g!==g){g=v.g;h=`<div class="grp">${esc(v.g)}</div>`}return h+`<button class="${S.view===v.k?"on":""}" data-go="${v.k}">${esc(v.t)}<span class="st">${badge(v.k)}</span></button>`}).join("")
+    +`<div class="code" style="margin:12px 8px 0">${storeMode==="cloud"?"保存：あなた専用":"保存：この端末のみ"}${AI?"":"<br>AI：未接続（手動）"}</div>`;
+  const f=V[S.view]||V.intro;
+  $("#main").innerHTML=(NOTE?`<div class="banner">${esc(NOTE)}</div>`:"")+f();
+  NOTE="";
+  persist();
+}
+function badge(k){
+  if(k==="intro")return S.intro.done?"✓":"";
+  if(k==="deep")return STEPS.every(s=>S.deep[s.id]&&S.deep[s.id].done)?"✓":"";
+  if(k==="self")return S.claims.length?String(S.claims.length):"";
+  if(k==="log")return S.logs.length?String(S.logs.length):"";
+  if(k==="co")return S.companies.length?String(S.companies.length):"";
+  return "";
+}
+document.addEventListener("click",e=>{
+  const go=e.target.closest("[data-go]");if(go){S.view=go.dataset.go;render();window.scrollTo({top:0});return}
+  const a=e.target.closest("[data-act]");if(a&&!a.hasAttribute("disabled")&&ACT[a.dataset.act])ACT[a.dataset.act](a,e);
+});
+document.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.bind){setPath(t.dataset.bind,t.type==="checkbox"?t.checked:t.value);lsSet();persist()}});
+document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.bind&&(t.tagName==="SELECT"||t.type==="checkbox")){setPath(t.dataset.bind,t.type==="checkbox"?t.checked:t.value);render()}});
+function setPath(p,v){const ks=p.split(".");let o=S;for(let i=0;i<ks.length-1;i++){if(o[ks[i]]==null)o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=v}
+const V={},ACT={};
+function feedback(goal,j,nextQ){
+  return `<div class="judge">
+    <div><b>目指すところ</b>　${esc(goal||"")}</div>
+    <div><b>今の位置</b>　${lv(j.level)} ${(j.evidence||[]).map(x=>`<mark>${esc(x)}</mark>`).join(" ")}</div>
+    ${nextQ?`<div><b>次の一手</b>　${esc(nextQ)}</div>`:""}
+  </div>`;
+}
+
+/* ---------- はじめに ---------- */
+V.intro=()=>{const it=S.intro;return `<section class="sheet">
+  <div class="code">はじめに · 1分</div>
+  <h2>どちらの人を「仕事ができそう」と信用しますか？</h2>
+  <div class="split">
+    <div class="opt ${it.pick==="a"?"on":""}" data-act="introPick" data-v="a"><div class="code">A</div>サークルで頑張りました。主体性を発揮し、集客に貢献しました。</div>
+    <div class="opt ${it.pick==="b"?"on":""}" data-act="introPick" data-v="b"><div class="code">B</div>30人のサークルで私が集客担当になり、SNSの投稿を週1回から毎日に変えた。3か月続けて、参加者は40人から70人になった。</div>
+  </div>
+  <label class="f">そう思った理由を一言
+    <textarea id="intro-why" data-bind="intro.why" style="min-height:64px">${esc(it.why)}</textarea></label>
+  <label class="f">企業は、この話から最終的に何を知りたいのだと思いますか？
+    <textarea id="intro-goal" data-bind="intro.goal" style="min-height:64px">${esc(it.goal)}</textarea></label>
+  <div class="row"><button class="btn" data-act="introCheck">答え合わせ</button>${spin()}</div>
+  ${it.done?`${why("① 推し量り",AWARE_TEXT[1])}${why("② 証拠",AWARE_TEXT[2])}${why("③ 最終的に見たいもの",AWARE_TEXT[3])}
+    ${it.fb?`<div class="judge">${esc(it.fb)}</div>`:""}
+    <p class="note">ここからは、自分についての「仮説」をつくり、ES・面接・インターンで試しながら確かめていきます。1回で終わる診断ではありません。変えられないこと（学歴による判断、面接官ごとのぶれ）もありますが、ここでは変えられることに集中します。</p>
+    <div class="row"><button class="btn" data-go="recall">過去を掘り起こす</button><button class="btn line" data-go="guide">企業の見方を読む</button></div>`:""}
+</section>`};
+ACT.introPick=a=>{S.intro.pick=a.dataset.v;render()};
+ACT.introCheck=async()=>{const it=S.intro;
+  if(!it.pick||!it.why.trim()||!it.goal.trim()){note("AかBを選び、2つの問いに答えてから押してください。");render();return}
+  if(AI){busy=true;render();try{const r=await aiJSON(`就活生に、具体性のない自己PR(A)と、具体的な行動・数字のある自己PR(B)を見せ、どちらを信用するか、理由、企業が最終的に何を知りたいかを予想させた。次の3項目の理解の段階を0〜3で判定する。0=表面的／1=言葉だけ／2=理由まで説明できる／3=自分の準備の判断に結びつけている。
+項目1:企業は中身を直接見られず推し量るしかない　項目2:手間のかかった具体的行動が証拠になる　項目3:企業が最終的に知りたいのは入社後に伸びるか・合って長く働くか
+選んだもの:${it.pick.toUpperCase()}　理由:${it.why}　予想:${it.goal}
+JSON:{"l1":0,"l2":0,"l3":0,"feedback":"本人の言葉を引用し、合っている点と抜けている点を2文で"}`,"quick");setAware(1,r.l1);setAware(2,r.l2);setAware(3,r.l3);it.fb=r.feedback||""}catch(e){it.fb=aiErr(e)}busy=false}
+  else{setAware(1,1);setAware(2,it.pick==="b"?1:0);setAware(3,1)}
+  it.done=true;render()};
+
+/* ---------- 企業の見方 ---------- */
+V.guide=()=>`<section class="sheet"><div class="code">企業の見方</div>
+  <h2>企業は、何を、どうやって見ようとしているか</h2>
+  <div class="tablewrap"><table><thead><tr><th>手段</th><th>見えるもの</th><th>判断がゆがむところ</th></tr></thead><tbody>
+  <tr><td>ES</td><td>書かれた具体性・構成。面接官が事前に持つ印象もここでできる</td><td>短い時間で読まれるので、分かりやすさで判断されやすい。読みやすい文ほど信用される</td></tr>
+  <tr><td>適性検査</td><td>考える力の得点、性格検査の回答</td><td>性格検査で良く見せると、回答の矛盾や面接との食い違いが出やすい</td></tr>
+  <tr><td>グループ討議</td><td>集団の中での実際のふるまい</td><td>発言の量が多い人が高く見られやすい</td></tr>
+  <tr><td>面接</td><td>話の中身と、その場の受け答え</td><td>最初の数分の印象で判断が決まり、その後はその印象を確かめる質問をしがち。型が決まっていない面接ほど印象の比重が上がる</td></tr>
+  <tr><td>インターン</td><td>実際に近い仕事の場での行動</td><td>見る人や配属先による違い。2025年卒から、一定の型のインターンで得た情報は選考に使えるようになった</td></tr>
+  </tbody></table></div>
+  <h3>選考の形の3つの成り立ち</h3>
+  <ul><li><b>本当に見たいものを見る手段</b>（型の決まった面接、インターンでの観察）→ 中身で備える</li>
+  <li><b>大勢を安く絞る手段</b>（ES、適性検査、学歴）→ 短い時間で伝わる形で備える</li>
+  <li><b>他社のまねや慣習で残っている形</b>（どこも同じ設問、雑談的な面接）→ 使い回せる材料で備える</li></ul>
+  <h3>変えられないことと、変えられること</h3>
+  <p>学歴による判断、面接官ごとのぶれ、結果の運は、あなたには変えられません。変えられるのは、事実の具体性、伝え方、確かめた企業の情報、これからつくる経験です。このアプリは、変えられることに集中します。</p>
+  <div class="row"><button class="btn line" data-act="guideRead">読んだ</button></div>
+</section>`;
+ACT.guideRead=()=>{setAware(1,1);setAware(4,1);note("記録しました。設問ごとの意図は、ESを組み立てるときに予想しながら確かめます。");render()};
+
+/* ---------- 過去を掘り起こす ---------- */
+V.recall=()=>`<section class="sheet"><div class="code">過去を掘り起こす · 時期 × 領域</div>
+  <h2>何をしていたかを、短い言葉で埋めてください</h2>
+  <p class="note">役割や活動を一言ずつ（例：「集客担当」「塾講師」）。空欄があっても大丈夫です。</p>
+  <div class="tablewrap"><table><thead><tr><th>時期</th>${AREAS.map(a=>`<th>${esc(a)}</th>`).join("")}</tr></thead><tbody>
+  ${PERIODS.map(p=>`<tr><th>${esc(p)}</th>${AREAS.map(a=>{const k=p+"|"+a;return `<td><input type="text" id="g-${esc(k)}" data-bind="grid.${k}" value="${esc(S.grid[k]||"")}"></td>`}).join("")}</tr>`).join("")}
+  </tbody></table></div>
+  ${why("なぜ表から始めるのか","記憶は「時期 → その時期の活動 → 具体的な1場面」の順に整理されています。上から順にたどると、成功体験だけに偏らず、具体的な場面にたどり着きやすくなります。")}
+</section>
+<section class="sheet"><div class="code">出来事の候補</div>
+  <h2>表を見ながら、次に当てはまる出来事を挙げてください</h2>
+  <div class="row">${CUES.map(c=>`<span class="tag">${esc(c.t)}</span>`).join("")}</div>
+  ${candForm()}
+  ${candList()}
+</section>
+<section class="sheet"><div class="code">深掘りする2つを選ぶ</div>
+  ${pickHtml()}
+</section>`;
+function candForm(){return `<div class="split">
+  <label class="f">出来事（一言で）<input type="text" id="c-title"></label>
+  <label class="f">当てはまる問い<select id="c-cue">${CUES.map(c=>`<option value="${c.k}">${esc(c.t)}</option>`).join("")}</select></label>
+  <label class="f">時期<select id="c-period">${PERIODS.map(p=>`<option>${esc(p)}</option>`).join("")}</select></label>
+  <label class="f">領域<select id="c-area">${AREAS.map(a=>`<option>${esc(a)}</option>`).join("")}</select></label></div>
+  <div class="row"><label class="chip"><input type="checkbox" id="c-group" style="margin-right:6px">他の人と一緒に取り組んだ</label><button class="btn" data-act="addCand">候補に加える</button></div>`}
+function candList(){return S.cands.length?`<div class="cards">${S.cands.map(c=>`<div class="card"><b>${esc(c.title)}</b><div class="row">${tags(c)}</div><div class="row"><button class="btn line" data-act="delCand" data-id="${c.id}">消す</button></div></div>`).join("")}</div>`:'<p class="note">2つ以上あると、深掘りする出来事を選べます。</p>'}
+function pickHtml(){
+  const m=ep(S.main),sb=ep(S.sub);let w="";
+  if(m&&sb&&m.area===sb.area)w+=`<div class="banner">2つが同じ領域です。違う領域にすると、場面が違っても同じ動き方が出るかを確かめられます。</div>`;
+  if(m&&sb&&!m.group&&!sb.group)w+=`<div class="banner">どちらも1人で取り組んだ出来事です。2つ目を他の人と一緒の場面にすると、チームで取り組んだ経験の材料が出てきます。</div>`;
+  return `${why("1つ目の選び方","「一番すごい成果」では選びません。信用されるのは、成果の大きさより、あなたが選んだことと、かけた手間です。自分で選べる余地が大きかった／思ったとおりにいかないことがあった／時間や手間がかかった／細かく思い出せる、に多く当てはまるものが向いています。")}
+  <div class="cards">${S.cands.map(c=>`<div class="card pick ${S.main===c.id?"sel":""}" data-act="setMain" data-id="${c.id}"><span class="code">1つ目にする</span><b>${esc(c.title)}</b><div class="row">${tags(c)}</div></div>`).join("")}</div>
+  <p class="note">2つ目は、1つ目と同じことをした出来事を探して選ばないでください。合うものばかり探すと、判定が甘くなります。比べるのは選んだ後です。</p>
+  <div class="cards">${S.cands.filter(c=>c.id!==S.main).map(c=>`<div class="card pick ${S.sub===c.id?"sel":""}" data-act="setSub" data-id="${c.id}"><span class="code">2つ目にする</span><b>${esc(c.title)}</b><div class="row">${tags(c)}</div></div>`).join("")}</div>
+  ${w}<div class="row"><button class="btn" data-go="deep" ${m&&sb?"":"disabled"}>深掘りへ</button></div>`}
+ACT.addCand=()=>{const t=$("#c-title").value.trim();if(!t)return;S.cands.push({id:uid(),title:t,cue:$("#c-cue").value,period:$("#c-period").value,area:$("#c-area").value,group:$("#c-group").checked,src:"past"});render()};
+ACT.delCand=a=>{S.cands=S.cands.filter(c=>c.id!==a.dataset.id);if(S.main===a.dataset.id)S.main=null;if(S.sub===a.dataset.id)S.sub=null;render()};
+ACT.setMain=a=>{S.main=a.dataset.id;if(S.sub===S.main)S.sub=null;render()};
+ACT.setSub=a=>{S.sub=a.dataset.id;render()};
+
+/* ---------- 深掘り ---------- */
+function curStep(){return STEPS.find(s=>!(S.deep[s.id]&&S.deep[s.id].done))||null}
+function dget(id){return S.deep[id]||(S.deep[id]={msgs:[],qi:0,level:null,tries:0,done:false,next:null,j:null})}
+V.deep=()=>{
+  if(!S.main||!S.sub)return `<section class="sheet"><h2>先に、深掘りする出来事を2つ選んでください</h2><div class="row"><button class="btn" data-go="recall">過去を掘り起こす</button></div></section>`;
+  const cur=curStep();
+  const list=STEPS.map(s=>{const d=S.deep[s.id];return `<div class="row" style="justify-content:space-between;${cur&&cur.id===s.id?"font-weight:700":""}"><span>${esc(s.title)}</span>${s.rubric?(d&&d.level!=null?lv(d.level):'<span class="lv">未</span>'):(d&&d.done?'<span class="lv l2">済</span>':'<span class="lv">未</span>')}</div>`}).join("");
+  let body;
+  if(!cur)body=`<div class="ok-banner">深掘りがひととおり終わりました。次は、これを「今の自分についての仮説」にまとめます。</div><div class="row"><button class="btn" data-go="self">自分の記録へ</button></div>`;
+  else{
+    const d=dget(cur.id);const epx=cur.ep==="main"?ep(S.main):cur.ep==="sub"?ep(S.sub):null;
+    const q=d.next||cur.qs[Math.min(d.qi,cur.qs.length-1)];
+    body=`<div class="code">${epx?esc(epx.title):"2つの出来事"}</div><h2>${esc(cur.title)}</h2>
+      ${d.msgs.map(m=>`<div class="q">${esc(m.q)}</div><div class="a">${esc(m.a)}</div>`).join("")}
+      ${d.j?feedback(cur.goal,d.j,d.next):""}
+      ${d.showWhy?why("この質問で企業が見ていること",cur.why):""}
+      ${d.gateStop?`<div class="banner">何度か補っても、具体的な行動がはっきりしませんでした。この出来事の記憶が薄いのかもしれません。同じ質問を重ねると、なかった細部を作ってしまうおそれがあるので、別の出来事に切り替えることをすすめます。</div>
+        <div class="row"><button class="btn" data-act="switchEp">別の出来事に切り替える</button><button class="btn line" data-act="forceNext">このまま進む</button></div>`
+      :`<div class="q">${esc(q)}</div><textarea id="deep-ans"></textarea>
+        <div class="row"><button class="btn" data-act="deepSend">答える</button>${busy?'<span class="spin"></span> 判定中…':""}
+        ${d.j&&cur.rubric&&!cur.gate?'<button class="btn line" data-act="forceNext">次の項目へ</button>':""}</div>
+        ${!AI&&cur.rubric&&d.qi>=cur.qs.length&&d.level==null?selfJudge(cur):""}`}`;
+  }
+  return `<section class="sheet">${body}</section><section class="sheet"><div class="code">進み具合</div><p class="note">1つ目：${esc((ep(S.main)||{}).title||"")}／2つ目：${esc((ep(S.sub)||{}).title||"")}</p>${list}
+    <p class="note">事実を先に、理由や価値観は後で聞きます。答えた後に、その質問で企業が見ていることを表示します。</p></section>`;
+};
+function selfJudge(cur){return `<div class="judge"><b>自分で判定してください（AI未接続）</b><div class="note">${esc(cur.rubric)}</div><div class="row">${[0,1,2,3].map(n=>`<button class="chip" data-act="selfLv" data-n="${n}">段階${n}</button>`).join("")}</div></div>`}
+ACT.selfLv=a=>{const cur=curStep();const d=dget(cur.id);const n=+a.dataset.n;d.level=n;d.j={level:n,evidence:[]};d.showWhy=true;if(n>=2)d.done=true;else{d.tries++;d.next=cur.follow?Object.values(cur.follow)[d.tries%5]:"判定の基準を見て、足りない事実を1つ足してください。";if(cur.gate&&d.tries>=3)d.gateStop=true}render()};
+ACT.deepSend=async()=>{
+  const cur=curStep();if(!cur||busy)return;const ans=$("#deep-ans").value.trim();if(!ans)return;
+  const d=dget(cur.id);const q=d.next||cur.qs[Math.min(d.qi,cur.qs.length-1)];d.msgs.push({q,a:ans});
+  if(!d.next)d.qi++;d.next=null;
+  if(d.qi<cur.qs.length&&!d.j){render();return}
+  if(!cur.rubric){d.done=true;d.showWhy=true;render();return}
+  if(!AI){render();return}
+  busy=true;render();
+  try{
+    const epx=cur.ep==="main"?ep(S.main):cur.ep==="sub"?ep(S.sub):null;
+    const r=await aiJSON(`深掘りの項目「${cur.title}」の回答の段階を判定する。
+判定基準: ${cur.rubric}
+出来事: ${epx?epx.title:"2つの出来事"}
+${cur.ep==="both"?"これまでの深掘りの記録:\n"+deepText()+"\n":""}この項目のやりとり:
+${d.msgs.map(m=>`問:${m.q}\n答:${m.a}`).join("\n")}
+ルール: 書かれていない特徴は満たしていないとみなす。段階を上げる根拠は回答の短い引用で示す。missingは、まだ見えない特徴の記号(a〜e)を重要な順に。followupは、まだ見えない特徴を1つだけ、過去の事実を聞く形で、やさしい言葉で50字以内。「なぜ」を使わない。答えの例を含めない。
+JSON:{"level":0,"evidence":["引用"],"missing":["a"],"followup":""}`);
+    const level=Math.max(0,Math.min(3,r.level|0));
+    d.level=level;d.j={level,evidence:r.evidence||[]};d.showWhy=true;d.tries++;
+    if(level>=2){d.done=true;d.next=null}
+    else{const k=(r.missing||[])[0];d.next=(cur.follow&&cur.follow[k])||r.followup||"もう少し具体的に、そのとき実際にしたことを教えてください。";if(cur.gate&&d.tries>=3)d.gateStop=true}
+    if(level>=2&&cur.id==="p1")setAware(5,1);
+  }catch(e){d.msgs.pop();note(aiErr(e))}
+  busy=false;render();
+};
+ACT.forceNext=()=>{const cur=curStep();if(!cur)return;const d=dget(cur.id);d.done=true;d.gateStop=false;render()};
+ACT.switchEp=()=>{["m0","m1","m2","m3","m4","m5"].forEach(k=>delete S.deep[k]);S.main=null;S.view="recall";render()};
+
+/* ---------- 日々の記録 ---------- */
+V.log=()=>`<section class="sheet"><div class="code">日々の記録 · 1分</div>
+  <h2>今日のことを、3つだけ</h2>
+  <p class="note">時間がたつと、細かいことは消えていきます。その日のうちに短く残しておくと、あとで深掘りやESの材料になります。記録するタイミングは、あなたが決めてください。</p>
+  <label class="f">いつ記録しますか（例：インターン帰りの電車で）<input type="text" id="log-when" data-bind="logWhen" value="${esc(S.logWhen||"")}"></label>
+  <label class="f">今日やったことを1つ<input type="text" id="log-did"></label>
+  <label class="f">誰と一緒でしたか<input type="text" id="log-who"></label>
+  <label class="f">思ったとおりにいったこと、いかなかったこと（どちらか1つ）<input type="text" id="log-how"></label>
+  <div class="row"><button class="btn" data-act="logAdd">記録する</button></div>
+</section>
+${S.logs.length?`<section class="sheet"><h3>これまでの記録</h3><div class="tablewrap"><table><thead><tr><th>日付</th><th>やったこと</th><th>誰と</th><th>いった・いかなかった</th><th></th></tr></thead><tbody>
+${S.logs.map(l=>`<tr><td class="code">${esc(l.date)}</td><td>${esc(l.did)}</td><td>${esc(l.who)}</td><td>${esc(l.how)}</td><td>${l.used?'<span class="tag">候補にした</span>':`<button class="btn line" data-act="logToCand" data-id="${l.id}">出来事の候補にする</button>`}</td></tr>`).join("")}
+</tbody></table></div></section>`:""}`;
+ACT.logAdd=()=>{const did=$("#log-did").value.trim();if(!did)return;S.logs.unshift({id:uid(),date:today(),did,who:$("#log-who").value.trim(),how:$("#log-how").value.trim(),used:false});note("記録しました。");render()};
+ACT.logToCand=a=>{const l=S.logs.find(x=>x.id===a.dataset.id);l.used=true;S.cands.push({id:uid(),title:l.did,cue:"long",period:"今",area:"インターン",group:!!l.who,src:"log"});note("出来事の候補に加えました。この記録が、深掘りの材料になります。");render()};
+
+/* ---------- 他人の見方 ---------- */
+V.others=()=>{
+  const req=reqText();
+  return `<section class="sheet"><div class="code">他人の見方</div>
+  <h2>あなたを実際の場面で見ていた人に、具体的な場面を聞く</h2>
+  ${why("なぜ他人に聞くのか","企業は、あなたの外から、あなたを推し量る「他人」です。評価が絡む特性（考える力、人前でのふるまい）は、本人より他人のほうが正確に見えることがあります。他人の見方を集めることは、企業からの見え方を前もって確かめることに近いと言えます。ただし、不安のような内面は本人のほうが正確です。他人の見方は正解ではなく、事実で確かめる材料として扱います。")}
+  <p class="note">立場や場面がばらけるように2〜3人（例：インターンの上司、サークルの仲間、アルバイト先の人）。</p>
+  <label class="f">どの場面のあなたについて聞きますか<input type="text" id="o-ctx" data-bind="oCtx" value="${esc(S.oCtx||"")}" placeholder="例：サークルの運営"></label>
+  <div class="q" id="o-req">${esc(req)}</div>
+  <div class="row"><button class="btn sub" data-act="copyReq">文面をコピー</button></div>
+  </section>
+  <section class="sheet"><h3>返ってきた答えを、言い換えずに貼る</h3>
+  <div class="split"><label class="f">誰から（関係だけ）<input type="text" id="o-who" placeholder="例：インターンの上司"></label><label class="f">どの場面について<input type="text" id="o-c2" value="${esc(S.oCtx||"")}"></label></div>
+  <textarea id="o-text"></textarea>
+  <div class="row"><button class="btn" data-act="otherAdd">自分の記録と突き合わせる</button>${spin()}</div>
+  </section>
+  ${S.others.map(o=>`<section class="sheet"><div class="row"><b>${esc(o.who)}</b><span class="tag">${esc(o.ctx)}</span><span class="note">${esc(o.date)}</span></div><div class="a">${esc(o.text)}</div>
+    ${o.an?`<div class="judge"><b>一致</b>${(o.an.match||[]).map(x=>`<div>#${x.n} ${esc((S.claims[x.n-1]||{}).claim||"")}　<mark>${esc(x.quote)}</mark></div>`).join("")||'<span class="note">なし</span>'}
+      <b>ずれ</b>${(o.an.diff||[]).map(x=>`<div>#${x.n} ${esc(x.note)}　<mark>${esc(x.quote)}</mark></div>`).join("")||'<span class="note">なし</span>'}
+      <b>新しい発見（盲点の候補）</b>${(o.an.fresh||[]).map(x=>`<div>${esc(x)}</div>`).join("")||'<span class="note">なし</span>'}
+      <span class="note">一致した仮説は「他人も確認」になりました。ずれと新しい発見は、正解ではなく、深掘りで確かめる問いとして扱ってください。</span></div>`:""}</section>`).join("")}`;
+};
+function reqText(){const c=S.oCtx||"〇〇";return `自分のことを見直していて、${c}のときの私について、気をつかわずに教えてほしいです。
+① そのとき、私がどう動いていたか、具体的な場面を1つ
+② 私が力を出していたと思う場面と、苦戦していたと思う場面を1つずつ
+③ 私が自分で気づいていなさそうなことがあれば
+短くて大丈夫です。`}
+ACT.copyReq=async()=>{try{await navigator.clipboard.writeText(reqText());note("コピーしました。LINEなどで送ってください。")}catch(e){const el=$("#o-req");const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);note("文面を選択しました。コピーして送ってください。")}render()};
+ACT.otherAdd=async()=>{
+  const text=$("#o-text").value.trim();if(!text)return;
+  const o={id:uid(),who:$("#o-who").value.trim()||"（未記入）",ctx:$("#o-c2").value.trim(),text,date:today(),an:null};S.others.unshift(o);
+  if(!AI||!S.claims.length){if(!S.claims.length)note("自分の記録がまだないので、突き合わせはあとでできます。");render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`本人の仮説と、他人から見た本人についての答えを突き合わせる。
+本人の仮説:\n${claimsText()}
+他人(${o.who}、場面:${o.ctx})の答え:\n${text}
+ルール: match=他人の答えの具体的な事実が、その仮説を支えているもの。diff=仮説と食い違うもの（どちらが正しいかは決めない）。fresh=仮説にない動き方。引用は他人の答えから短く。
+JSON:{"match":[{"n":1,"quote":""}],"diff":[{"n":1,"quote":"","note":"どう食い違うか"}],"fresh":["仮説にない動き方を短く"]}`);
+    o.an={match:r.match||[],diff:r.diff||[],fresh:r.fresh||[]};
+    (o.an.match||[]).forEach(x=>{const c=S.claims[x.n-1];if(c&&c.cert<2){c.cert=2;hist(`「${c.claim.slice(0,30)}」が他人の見方でも確かめられた`,`${o.who}の答え`)}});
+    (o.an.diff||[]).forEach(x=>S.gaps.push(`他人の見方とのずれ（#${x.n}）：${x.note}`));
+  }catch(e){note(aiErr(e))}
+  busy=false;render();
+};
+
+/* ---------- 自分の記録 ---------- */
+V.self=()=>`<section class="sheet"><div class="code">自分の記録</div>
+  <h2>今の自分についての仮説</h2>
+  <p class="note">形容詞（「主体性がある」）ではなく、場面つきで書きます。どの仮説にも、支える事実をひもづけます。どれも今の仮説なので、試しながら直していきます。</p>
+  ${why("最初はAIが下書きを支えます","下書きを、あなた自身の言葉に直してください。自分で作った言葉のほうが、面接で自然に話せます。慣れてきたら、自分で先に書いてから比べてください。")}
+  <div class="row"><button class="btn" data-act="selfDraft" ${deepText()?"":"disabled"}>${S.claims.length?"深掘りから下書きを作り直す":"深掘りから下書きを作る"}</button>${spin()}<button class="btn line" data-act="claimAdd">自分で仮説を足す</button></div>
+</section>
+${TYPES.map(t=>{const list=S.claims.map((c,i)=>[c,i]).filter(([c])=>c.type===t.k);return `<section class="sheet"><div class="code">${t.k} · ${esc(t.t)}</div><p class="note">形：${esc(t.form)}</p>
+  ${list.map(([c,i])=>claimHtml(c,i)).join("")||'<p class="note">まだありません。</p>'}</section>`}).join("")}
+${S.gaps.length?`<section class="sheet"><div class="code">ずれ</div><p class="note">消さずに残します。食い違いを自覚しているほうが深掘りで崩れにくく、次に確かめる材料にもなります。</p><ul>${S.gaps.map(g=>`<li>${esc(g)}</li>`).join("")}</ul></section>`:""}
+<section class="sheet"><div class="code">物語にする</div>
+  <h3>過去 → 今 → これから を一本の流れに</h3>
+  <p class="note">志望動機や「入社後にやりたいこと」の土台になります。後からもっともらしい物語を作らないよう、各部分は上の仮説と事実につなげてください。</p>
+  <textarea id="story" data-bind="story" style="min-height:140px">${esc(S.story)}</textarea>
+  <div class="row"><button class="btn sub" data-act="storyDraft" ${S.claims.length?"":"disabled"}>仮説から下書きを支えてもらう</button></div>
+</section>
+<section class="sheet"><label class="f">変えたときのきっかけ（任意。伸びの記録に残ります）<input type="text" id="self-why"></label><div class="row"><button class="btn" data-act="selfSave">直した内容を確定する</button></div></section>`;
+function claimHtml(c,i){
+  const need=c.use?`<div class="note">選考で使う仮説：面接の6種類の深掘りで崩れないか、練習で確かめます。<br>${PROBES.map(p=>{const v=(c.probes||{})[p.k];return `<span class="lv ${v>=2?"l2":"l1"}">${p.t}${v!=null?" 段階"+v:" 未"}</span>`}).join(" ")}${probeOk(c)?' <span class="lv l3">十分</span>':""}</div>`:"";
+  return `<div class="stmt"><div class="row" style="justify-content:space-between"><span class="k">#${i+1}</span><span class="tag">${esc(CERT[c.cert]||"")}</span></div>
+  <textarea id="cl-${i}" data-bind="claims.${i}.claim" style="min-height:64px">${esc(c.claim)}</textarea>
+  ${(c.data||[]).length?`<div class="ev"><span class="note">支える事実：</span>${c.data.map(x=>`<mark>${esc(x)}</mark>`).join(" ")}</div>`:""}
+  ${c.warrant?`<div class="ev note">なぜ支えになるか：${esc(c.warrant)}</div>`:""}
+  <label class="f">次にどう試すか<input type="text" id="cl-next-${i}" data-bind="claims.${i}.next" value="${esc(c.next||"")}"></label>
+  <div class="row"><span class="note">どこまで確かめられたか（先に自分で）：</span>${CERT.map((t,j)=>`<button class="chip ${c.selfCert===j?"on":""}" data-act="selfCert" data-i="${i}" data-j="${j}">${esc(t)}</button>`).join("")}</div>
+  ${c.selfCert!=null&&c.aiCert!=null?`<div class="note">AIの見立て：<b>${esc(CERT[c.aiCert])}</b>${c.selfCert!==c.aiCert?"。あなたの見立てとずれています。支える事実の数と場面を見直してみてください。":"。一致しました。"}</div>`:""}
+  <label class="chip"><input type="checkbox" id="cl-use-${i}" data-bind="claims.${i}.use" ${c.use?"checked":""} style="margin-right:6px">選考で使う</label>
+  ${need}
+  <div class="row"><button class="btn line" data-act="claimDel" data-i="${i}">消す</button></div></div>`}
+ACT.selfCert=a=>{S.claims[+a.dataset.i].selfCert=+a.dataset.j;render()};
+ACT.claimAdd=()=>{S.claims.push({id:uid(),type:"A",claim:"",data:[],warrant:"",cert:0,aiCert:null,selfCert:null,next:"",use:false,probes:{}});render()};
+ACT.claimDel=a=>{S.claims.splice(+a.dataset.i,1);render()};
+ACT.selfDraft=async()=>{
+  if(!AI){note(aiErr(new Error("noai")));render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`深掘りの記録から、本人についての仮説を4つの型で作る。
+A 行動のパターン:「私は（どんな場面）では、（どう動く）」。形容詞は使わない。データは2つ以上の出来事から。
+B 大事にしていること:「私は（何）を大事にしている。そう思うようになったのは（経験）から」
+C 伸びる条件と伸び方:「私は（どんな環境）で、（どういうやり方で）伸びる」
+D つまずき方と立て直し方:「私は（どんなとき）につまずきやすく、（どうやって）立て直してきた」
+ルール: 各型1〜2つまで。どの仮説にも記録からの短い引用をデータとして付ける。データがなければ作らない。本人の言い回しを残す。certは 0=1つの場面だけ 1=2つの場面で確認。next=その仮説を次の経験でどう試せるか（具体的に1文）。価値観と行動の食い違いはgapsへ。
+1つ目: ${(ep(S.main)||{}).title}　2つ目: ${(ep(S.sub)||{}).title}
+${deepText()}
+JSON:{"claims":[{"type":"A","claim":"","data":["引用"],"warrant":"","cert":0,"next":""}],"gaps":[""]}`,"complex");
+    const old=S.claims.length;
+    S.claims=(r.claims||[]).slice(0,8).map(c=>({id:uid(),type:["A","B","C","D"].includes(c.type)?c.type:"A",claim:c.claim||"",data:c.data||[],warrant:c.warrant||"",cert:c.cert===1?1:0,aiCert:c.cert===1?1:0,selfCert:null,next:c.next||"",use:false,probes:{}}));
+    S.gaps=r.gaps||[];hist(old?"自分の記録の下書きを作り直した":"自分の記録の下書きを作った","深掘り");
+  }catch(e){note(aiErr(e))}
+  busy=false;render();
+};
+ACT.storyDraft=async()=>{
+  if(!AI){note(aiErr(new Error("noai")));render();return}
+  busy=true;render();
+  try{S.story=await aiText(`本人の仮説だけを材料に、過去 → 今 → これからをつなぐ短い物語（200字程度）の下書きを書く。仮説にない事実や誇張は足さない。本人の言い回しを残す。各文の後ろに、もとにした仮説の番号を（#1）のように付ける。\n仮説:\n${claimsText()}`)}catch(e){note(aiErr(e))}
+  busy=false;render();
+};
+ACT.selfSave=()=>{hist("自分の記録を確定："+S.claims.map(c=>c.type+"「"+c.claim.slice(0,24)+"」").join(" "),$("#self-why").value.trim());note("確定しました。伸びの記録に残しました。");render()};
+
+/* ---------- 企業の記録 ---------- */
+V.co=()=>`<section class="sheet"><div class="code">企業の記録 · まず「十分によい」を決める</div>
+  <h2>探す前に、これがないと困る条件を書く</h2>
+  ${why("なぜ先に決めるのか","最善を探し続けると、決められなかったり、決めた後に満足できなかったりします。先に「これを満たせば十分」を決めておくと、探しているうちに基準がつり上がるのを防げます。")}
+  <label class="f">これがないと困る条件（1行に1つ）<textarea id="cr-must" data-bind="criteria.must" style="min-height:80px">${esc(S.criteria.must)}</textarea></label>
+  <label class="f">あるとうれしい条件<textarea id="cr-nice" data-bind="criteria.nice" style="min-height:64px">${esc(S.criteria.nice)}</textarea></label>
+  <label class="f">決める締切<input type="text" id="cr-dl" data-bind="criteria.deadline" value="${esc(S.criteria.deadline)}" placeholder="例：来年6月"></label>
+  <div class="row"><button class="btn sub" data-act="axisCheck">自分の軸として確かめる</button>${S.axisFb?`<span class="note">${esc(S.axisFb)}</span>`:""}</div>
+</section>
+<section class="sheet"><div class="code">広げる → 絞る</div>
+  <p class="note">広げる段階では、予定していなかった会社や誘いも含めて広く見ます。深く照合するのは、必須の条件で絞った少数だけです。</p>
+  <div class="split"><label class="f">会社名<input type="text" id="co-name"></label><div class="row" style="align-items:flex-end"><button class="btn" data-act="coAdd">広げるリストに加える</button></div></div>
+  ${musts().length&&S.companies.length?mustTable():""}
+</section>
+${S.companies.filter(c=>c.stage==="絞る").map(c=>coDeep(c)).join("")}`;
+function musts(){return S.criteria.must.split("\n").map(x=>x.trim()).filter(Boolean)}
+function mustTable(){const ms=musts();return `<div class="tablewrap"><table><thead><tr><th>会社</th>${ms.map(m=>`<th>${esc(m)}</th>`).join("")}<th>段階</th></tr></thead><tbody>
+  ${S.companies.map((c,ci)=>`<tr><td><b>${esc(c.name)}</b>${mustDone(c)?'<div class="lv l3">必須はすべて確かめ済み</div>':""}</td>${ms.map((m,mi)=>`<td><select id="mu-${ci}-${mi}" data-bind="companies.${ci}.must.${mi}">${["まだ分からない","合う","合わない"].map(s=>`<option ${(c.must||{})[mi]===s?"selected":""}>${s}</option>`).join("")}</select>
+    <select id="mus-${ci}-${mi}" data-bind="companies.${ci}.mustSrc.${mi}">${SOURCES.map(s=>`<option ${(c.mustSrc||{})[mi]===s?"selected":""}>${s||"出どころ"}</option>`).join("")}</select></td>`).join("")}
+    <td><select id="st-${ci}" data-bind="companies.${ci}.stage">${["広げる","絞る","見送り"].map(s=>`<option ${c.stage===s?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}
+  </tbody></table></div><p class="note">「まだ分からない」が残っていても大丈夫です。全部を確かめてから決めることはできませんし、キャリアは入社後もつくっていくものです。</p>`}
+function mustDone(c){const ms=musts();return ms.length&&ms.every((m,i)=>(c.must||{})[i]==="合う"&&HARD_SOURCES.includes((c.mustSrc||{})[i]))}
+function coDeep(c){const ci=S.companies.indexOf(c);return `<section class="sheet"><div class="row" style="justify-content:space-between"><h2>${esc(c.name)}</h2><button class="btn line" data-act="coDel" data-id="${c.id}">消す</button></div>
+  <label class="f">採り方<select id="ty-${ci}" data-bind="companies.${ci}.type">${["","会社の一員として採って育てる（メンバーシップ型）","職種を決めて採る（ジョブ型）","分からない"].map(s=>`<option ${c.type===s?"selected":""}>${s}</option>`).join("")}</select></label>
+  <div class="row"><button class="btn sub" data-act="coQs" data-id="${c.id}">確かめる問いを作る</button>${spin()}</div>
+  ${(c.qs||[]).length?`<div class="tablewrap"><table><thead><tr><th>相性</th><th>確かめる問い</th><th>分かったこと</th><th>判定</th><th>出どころ</th></tr></thead><tbody>
+  ${c.qs.map((x,i)=>`<tr><td><span class="tag">${esc(x.fit)}</span></td><td>${esc(x.q)}</td><td><input type="text" id="cq-${ci}-${i}" data-bind="companies.${ci}.qs.${i}.ans" value="${esc(x.ans||"")}"></td>
+    <td><select id="cqs-${ci}-${i}" data-bind="companies.${ci}.qs.${i}.status">${["まだ分からない","合う","合わない"].map(s=>`<option ${x.status===s?"selected":""}>${s}</option>`).join("")}</select></td>
+    <td><select id="cqo-${ci}-${i}" data-bind="companies.${ci}.qs.${i}.src">${SOURCES.map(s=>`<option ${x.src===s?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}
+  </tbody></table></div><p class="note">「合わない」は隠さず残します。応募するかは、あなたが決めます。まだ分からない問いは、面接の逆質問やインターンで確かめられます。</p>`:""}</section>`}
+ACT.coAdd=()=>{const n=$("#co-name").value.trim();if(!n)return;S.companies.push({id:uid(),name:n,stage:"広げる",type:"",must:{},mustSrc:{},qs:[]});render()};
+ACT.coDel=a=>{S.companies=S.companies.filter(c=>c.id!==a.dataset.id);render()};
+ACT.coQs=async a=>{
+  const c=S.companies.find(x=>x.id===a.dataset.id);
+  if(!AI){c.qs=[{fit:FITS[0],q:"社員の方が、仕事で一番大事にしていることは何ですか"},{fit:FITS[1],q:"新人が自分で決められる範囲はどこまでですか"},{fit:FITS[1],q:"仕事の結果へのフィードバックは、どのくらいの頻度でありますか"},{fit:FITS[2],q:"入社1〜2年目の人が、よくつまずくのはどんな場面ですか"}].map(x=>Object.assign(x,{ans:"",status:"まだ分からない",src:""}));render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`就活生が会社「${c.name}」に確かめる具体的な問いを、3種類の相性ごとに作る。
+価値観の適合=本人のBと、組織が大事にしていること・社員の実際の行動／ニーズと供給の適合=本人のCと必須の条件が得られるか／要求と能力の適合=仕事で実際に求められる行動・よくある困難と、本人のA・D
+採用ページで分かる問いではなく、社員の話・インターン・面接の逆質問で確かめられる、具体的で偽りにくい問いにする。合計5〜7個。
+本人の仮説:\n${claimsText()}\n必須の条件:\n${S.criteria.must||"（未記入）"}
+JSON:{"questions":[{"fit":"価値観の適合","q":""}]}`);
+    c.qs=(r.questions||[]).map(x=>({fit:x.fit,q:x.q,ans:"",status:"まだ分からない",src:""}))}catch(e){note(aiErr(e))}
+  busy=false;render();
+};
+ACT.axisCheck=async()=>{
+  if(!S.criteria.must.trim()){note("先に、これがないと困る条件を書いてください。");render();return}
+  if(!AI){setAware(6,1);S.axisFb="記録しました。";render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`就活生が「これがないと困る条件」を書いた。理解の段階を0〜3で判定（0=表面的／1=言葉だけ／2=理由と自分の経験に結びつけて説明できる／3=会社の比較や応募の判断に使っている）。
+本人の仮説:\n${claimsText()}\n条件:\n${S.criteria.must}
+JSON:{"level":0,"feedback":"仮説とどうつながっているか、つながっていない条件はどれかを1〜2文で"}`,"quick");setAware(6,r.level);S.axisFb=r.feedback||""}catch(e){S.axisFb=aiErr(e)}
+  busy=false;render();
+};
+
+/* ---------- ES ---------- */
+V.es=()=>{
+  const k=S.es._sel,q=QUESTIONS.find(x=>x.k===k);
+  const top=`<section class="sheet"><div class="code">ES</div><h2>どの設問を書きますか</h2>
+    <div class="row">${QUESTIONS.map(x=>`<button class="chip ${k===x.k?"on":""}" data-act="esSel" data-k="${x.k}">${esc(x.t)}</button>`).join("")}</div>
+    ${why("ESは面接の台本の下書きでもあります","ESは短い時間で読まれ、読みやすい文ほど信用されます。そして多くの面接では、面接官がESを読んでから質問を考えます。ESは、面接官が「この人はこうだろう」と思う仮説をつくる文書です。生成AIで文章が誰でも整えられる今、差がつくのは文章のうまさではなく、事実の具体性と、それを自分の口で説明できるかです。")}</section>`;
+  if(!q)return top;
+  const st=S.es[k]||(S.es[k]={predict:"",revealed:false,fb:"",draft:"",company:"",checks:null,probeQs:[]});
+  const co=S.companies.find(c=>c.id===st.company);
+  return top+`<section class="sheet"><div class="code">${esc(q.t)} · まず予想</div>
+    <h2>この設問で、企業は何を見ていると思いますか？</h2>
+    <textarea id="es-pred" data-bind="es.${k}.predict" style="min-height:64px">${esc(st.predict)}</textarea>
+    <div class="row"><button class="btn" data-act="esReveal">答え合わせ</button>${spin()}</div>
+    ${st.revealed?`${why("企業が見ているもの",q.intent)}${st.fb?`<div class="judge">${esc(st.fb)}</div>`:""}
+    <div class="judge"><b>組み立ての順（話す向き：${esc(q.dir)}）</b><ol style="margin:0;padding-left:1.4em">${q.parts.map(p=>`<li>${esc(p)}</li>`).join("")}</ol><span class="note">【必】は、字数が足りなくても残す部分です。</span></div>`:""}
+  </section>
+  ${st.revealed?`<section class="sheet"><div class="code">${esc(q.t)} · 書く</div>
+    ${q.needsCo?`<label class="f">どの会社向けですか<select id="es-co" data-bind="es.${k}.company"><option value="">選んでください</option>${S.companies.map(c=>`<option value="${c.id}" ${st.company===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>`:""}
+    <div class="row"><button class="btn sub" data-act="esDraft" ${S.claims.length&&(!q.needsCo||co)?"":"disabled"}>自分の記録から下書きを支えてもらう</button>${spin()}</div>
+    <textarea id="es-draft" data-bind="es.${k}.draft" style="min-height:220px" placeholder="自分で書くか、下書きを自分の言葉に直してください">${esc(st.draft)}</textarea>
+    <div class="row"><button class="btn" data-act="esCheck">点検する</button><button class="btn line" data-act="esProbe">このESから面接の深掘りを予想する</button></div>
+    ${st.checks?`<div class="tablewrap"><table><thead><tr><th>点検</th><th>結果</th><th>次の一手</th></tr></thead><tbody>${st.checks.map(c=>`<tr><td>${esc(c.item)}</td><td>${c.ok?'<span class="lv l2">OK</span>':'<span class="lv l1">直す</span>'}</td><td>${esc(c.comment||"")}</td></tr>`).join("")}</tbody></table></div>`:""}
+    ${(st.probeQs||[]).length?`<div class="judge"><b>面接官が聞いてきそうな深掘り</b><ul>${st.probeQs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="row"><button class="btn sub" data-act="esToIv">この質問で面接の練習をする</button></div></div>`:""}
+  </section>`:""}`;
+};
+ACT.esSel=a=>{S.es._sel=a.dataset.k;render()};
+ACT.esReveal=async()=>{const k=S.es._sel,q=QUESTIONS.find(x=>x.k===k),st=S.es[k];
+  if(!st.predict.trim()){note("先に予想を書いてください。");render();return}
+  st.revealed=true;
+  if(AI){busy=true;render();try{const r=await aiJSON(`就活生に「${q.t}」で企業が何を見ているか予想させた。要点は「${q.intent}」。予想:${st.predict}
+段階0〜3（0=表面的／1=言葉だけ／2=理由まで説明できる／3=自分の準備に結びつけている）で判定。
+JSON:{"level":0,"feedback":"予想の言葉を引用し、合っている点と抜けている点を2文で"}`,"quick");setAware(4,r.level);st.fb=r.feedback||""}catch(e){st.fb=aiErr(e)}busy=false}else setAware(4,1);
+  render()};
+ACT.esDraft=async()=>{const k=S.es._sel,q=QUESTIONS.find(x=>x.k===k),st=S.es[k],co=S.companies.find(c=>c.id===st.company);
+  busy=true;render();
+  try{const r=await aiJSON(`就活生の「${q.t}」の下書きを、本人の仮説だけを材料に組み立てる。仮説にない事実は足さない。本人の言い回しを残す。やさしい言葉、短い文。最初の一文で答える。数字と固有名詞は仮説にあるものだけ使う。
+組み立ての順: ${q.parts.join(" → ")}
+仮説:\n${claimsText()}\n物語:\n${S.story||"（なし）"}
+${co?"企業の記録:\n"+co.name+"\n"+(co.qs||[]).map(x=>`[${x.fit}] ${x.q} → ${x.ans||"未"}（${x.status}／${x.src||"出どころ未"}）`).join("\n"):""}
+JSON:{"draft":"本文","missing":["材料が足りなかった部分"]}`);
+    st.draft=(r.draft||"")+((r.missing||[]).length?"\n\n（材料が足りない部分："+r.missing.join("、")+"）":"")}catch(e){note(aiErr(e))}
+  busy=false;render()};
+ACT.esCheck=async()=>{const k=S.es._sel,q=QUESTIONS.find(x=>x.k===k),st=S.es[k];
+  if(!st.draft.trim()){note("先に答えを書いてください。");render();return}
+  const items=["最初の一文が設問への答えになっている","【必】の部分がすべて入っている","やさしい言葉と短い文で書かれている（難しい言葉はかえって評価を下げる）","形容詞だけの主張がなく、事実が添えられている","書いた事実を、面接で自分の口で30秒説明できる","深掘りされたいところ（面接で話せる具体的な事実）が入口として置かれている","自分の記録や他の書類（他社のES、性格検査の答え）と食い違っていない"].concat(q.needsCo?["会社名を別の会社に入れ替えても成り立つ文になっていない"]:[]);
+  if(!AI){st.checks=items.map(i=>({item:i,ok:false,comment:"自分で確かめてください"}));render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`就活生の「${q.t}」の答えを点検する。点検項目:\n${items.map((x,i)=>(i+1)+". "+x).join("\n")}
+【必】の部分: ${q.parts.filter(p=>p.startsWith("【必】")).join("、")}
+本人の仮説:\n${claimsText()}\n答え:\n${st.draft}
+ルール: 「30秒説明できるか」は、答えの中の事実が仮説の事実に裏づけられているかで判断する。commentは、OKでない項目について、直す場所を答えから引用し、次の一手を1文で。
+JSON:{"checks":[{"item":"","ok":true,"comment":""}]}`);st.checks=r.checks||[]}catch(e){note(aiErr(e))}
+  busy=false;render()};
+ACT.esProbe=async()=>{const k=S.es._sel,st=S.es[k];if(!st.draft.trim())return;
+  if(!AI){st.probeQs=PROBES.map(p=>p.ex);render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`面接官として、このESを読んでから聞きたくなる深掘り質問を4つ作る。データ・論拠・限定・理由・状況の種類から選ぶ。各50字以内。\nES:\n${st.draft}\nJSON:{"questions":[""]}`,"quick");st.probeQs=r.questions||[]}catch(e){note(aiErr(e))}
+  busy=false;render()};
+ACT.esToIv=()=>{const st=S.es[S.es._sel];S.pset.mode="es";S.pcur={type:"data",q:(st.probeQs||[])[0]||"",queue:(st.probeQs||[]).slice(1)};S.view="iv";render()};
+
+/* ---------- 面接 ---------- */
+V.iv=()=>{
+  const ps=S.pset,cur=S.pcur;
+  const usable=S.claims.map((c,i)=>[c,i]).filter(([c])=>c.use);
+  return `<section class="sheet"><div class="code">面接 · 練習</div>
+  <h2>まとめを見ないで、面接官に答える</h2>
+  <p class="note">書いた答えを読み上げるのではなく、思い出して答えます。質問の種類と面接官の型を毎回変えます。丸暗記を防ぎ、想定外の質問に備えるためです。</p>
+  <div class="row">${[["first","最初の数分"],["deep","深掘り"],["reverse","逆質問"]].map(([k,t])=>`<button class="chip ${ps.mode===k?"on":""}" data-act="ivMode" data-k="${k}">${t}</button>`).join("")}${ps.mode==="es"?'<span class="chip on">ESからの深掘り</span>':""}</div>
+  ${ps.mode==="deep"||ps.mode==="first"?`<label class="f">面接官の型<select id="iv-per" data-bind="pset.persona">${PERSONAS.map(p=>`<option value="${p.k}" ${ps.persona===p.k?"selected":""}>${esc(p.t)}（${esc(p.d)}）</option>`).join("")}</select></label>`:""}
+  ${ps.mode==="deep"?`<label class="f">どの仮説について練習しますか（自分の記録で「選考で使う」にしたもの）<select id="iv-cl" data-bind="pset.claim"><option value="">選んでください</option>${usable.map(([c,i])=>`<option value="${c.id}" ${ps.claim===c.id?"selected":""}>#${i+1} ${esc(c.claim.slice(0,40))}</option>`).join("")}</select></label>
+    ${usable.length?"":'<div class="banner">自分の記録で、選考で使う仮説に印をつけてください。</div>'}`:""}
+  ${ps.mode==="first"?why("最初の数分","面接官は、最初の数分の印象で判断を方向づけ、その後はその印象を確かめる質問をしがちです。自己紹介と最初の答えの一文目が、想像以上に大事です。"):""}
+  ${ps.mode==="reverse"?reverseHtml():`<div class="row"><button class="btn" data-act="ivNew">質問を出してもらう</button>${spin()}</div>`}
+  ${cur&&ps.mode!=="reverse"?`<div class="q">${esc(cur.q)}</div><textarea id="iv-ans"></textarea><div class="row"><button class="btn" data-act="ivAns">答える</button></div>`:""}
+  </section>
+  <section class="sheet"><h3>本番の前に</h3>${why("緊張について","練習を重ねること自体が「やってうまくいった経験」になり、自信の一番強い土台になります。本番前の緊張を「準備ができている体の反応」と捉え直すと出来が良くなった、という研究もあります（効果の大きさは研究によって違います）。")}
+  ${why("盛らない理由","実際の強みを分かりやすく見せるのはよいことですが、盛ったことが見抜かれると評価は下がります。ESや性格検査との食い違いも見られています。")}
+  <p class="note">姿勢・視線・話す速さ・声の大きさは、文字の練習では確かめられません。人との模擬面接で確かめてください。</p></section>
+  ${S.practice.length?`<section class="sheet"><h3>これまでの練習</h3>${S.practice.slice(0,8).map(p=>practiceHtml(p)).join("")}</section>`:""}`;
+};
+function reverseHtml(){const open=[];S.companies.forEach((c,ci)=>(c.qs||[]).forEach((x,qi)=>{if(x.status==="まだ分からない")open.push({c,ci,x,qi})}));
+  return `${why("逆質問は企業を確かめる場","面接官の態度や答え方も、その会社の文化の手がかりです。企業の記録で「まだ分からない」の問いを、逆質問として使えます。聞けた答えは、そのまま企業の記録に入ります。具体的な問いを持っていること自体が、企業研究の深さとして伝わります。")}
+  ${open.length?`<div class="tablewrap"><table><thead><tr><th>会社</th><th>逆質問に使える問い</th><th>聞けた答え</th></tr></thead><tbody>${open.slice(0,10).map(o=>`<tr><td>${esc(o.c.name)}</td><td>${esc(o.x.q)}</td><td><input type="text" id="rv-${o.ci}-${o.qi}" data-bind="companies.${o.ci}.qs.${o.qi}.ans" value="${esc(o.x.ans||"")}"></td></tr>`).join("")}</tbody></table></div><div class="row"><button class="btn sub" data-act="rvSave">聞けた答えを企業の記録に入れる</button></div>`:'<p class="note">企業の記録に、まだ分からない問いがありません。企業の記録で確かめる問いを作ってください。</p>'}`}
+ACT.rvSave=()=>{S.companies.forEach(c=>(c.qs||[]).forEach(x=>{if(x.ans&&x.status==="まだ分からない"&&!x.src)x.src="面接の逆質問"}));note("出どころを「面接の逆質問」にしました。判定（合う／合わない）は企業の記録で決めてください。");render()};
+function practiceHtml(p){const pr=PROBES.find(x=>x.k===p.type);return `<div class="stmt"><div class="row">${pr?`<span class="tag">${esc(pr.t)}</span>`:""}<span class="tag">${esc((PERSONAS.find(x=>x.k===p.persona)||{}).t||p.mode)}</span>${p.eval&&p.eval.level!=null?lv(p.eval.level):""}<span class="note">${esc(p.date)}</span></div>
+  <div class="q">${esc(p.q)}</div><div class="a">${esc(p.a)}</div>
+  ${p.eval?`<div class="judge"><div><b>目指すところ</b>　${esc(pr?pr.need+"の材料で、深掘りに自分の言葉で答えられること":"最初の一文で答え、具体的な事実で支えること")}</div>
+    <div><b>今の位置</b>　${p.eval.level!=null?lv(p.eval.level):""} ${(p.eval.evidence||[]).map(x=>`<mark>${esc(x)}</mark>`).join(" ")}</div>
+    <div class="row">${[["answerFirst","最初の一文が答え"],["onPoint","聞かれたことに答えている"],["linked","主張と根拠をつないでいる"],["concise","長すぎない"]].map(([k,t])=>`<span class="lv ${p.eval.delivery&&p.eval.delivery[k]?"l2":"l1"}">${t}</span>`).join("")}</div>
+    ${p.eval.next?`<div><b>次の一手</b>　${esc(p.eval.next)}</div>`:""}
+    ${p.eval.level!=null&&p.eval.level<2?`<div class="row"><button class="btn line" data-go="deep">深掘りに戻る</button><button class="btn line" data-go="grow">育てるを見る</button></div>`:""}</div>`:""}</div>`}
+ACT.ivMode=a=>{S.pset.mode=a.dataset.k;S.pcur=null;render()};
+ACT.ivNew=async()=>{
+  const ps=S.pset,per=PERSONAS.find(p=>p.k===ps.persona)||PERSONAS[0];
+  if(ps.mode==="first"){S.pcur={type:null,q:["では、自己紹介をお願いします。1分くらいで。","学生時代に力を入れたことを、簡単に教えてください。","当社を志望する理由を教えてください。"][Math.floor(Math.random()*3)]};render();return}
+  const c=S.claims.find(x=>x.id===ps.claim);if(!c){note("練習する仮説を選んでください。");render();return}
+  const recent=S.practice.filter(p=>p.claimId===c.id).slice(0,3).map(p=>p.type);
+  const pool=PROBES.filter(p=>((c.probes||{})[p.k]??-1)<2&&!recent.includes(p.k));const pr=(pool.length?pool:PROBES)[Math.floor(Math.random()*(pool.length||PROBES.length))];
+  const last=S.practice.find(p=>p.claimId===c.id&&p.eval);
+  if(!AI){S.pcur={type:pr.k,q:pr.ex,claimId:c.id};render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`あなたは「${per.t}」（${per.d}）です。就活生の次の主張に対して、「${pr.t}」の種類の深掘り質問を1つ、面接官の口調で50字以内で作る（例：${pr.ex}）。
+${last?`直前の答えから持った印象が${last.eval.level>=2?"良い":"弱い"}ので、${last.eval.level>=2?"その印象を裏づける":"弱点を確かめる"}方向で聞く。`:""}
+主張:${c.claim}\n支える事実:${(c.data||[]).join(" / ")}
+JSON:{"question":""}`,"quick");S.pcur={type:pr.k,q:r.question||pr.ex,claimId:c.id}}catch(e){note(aiErr(e))}
+  busy=false;render();
+};
+ACT.ivAns=async()=>{
+  const cur=S.pcur,ps=S.pset;const a=$("#iv-ans").value.trim();if(!a)return;
+  const rec={mode:ps.mode,persona:ps.persona,claimId:cur.claimId||null,type:cur.type,q:cur.q,a,date:today(),eval:null};
+  S.practice.unshift(rec);
+  S.pcur=cur.queue&&cur.queue.length?{type:"data",q:cur.queue[0],queue:cur.queue.slice(1)}:null;
+  if(AI){busy=true;render();
+    const pr=PROBES.find(x=>x.k===cur.type);const c=S.claims.find(x=>x.id===cur.claimId);
+    try{const r=await aiJSON(`面接の答えを評価する。
+${pr?`質問の種類:${pr.t}（崩れないために必要な材料:${pr.need}）`:"最初の数分の質問"}
+${c?"本人の主張:"+c.claim+"\n支える事実:"+(c.data||[]).join(" / "):"本人の仮説:\n"+claimsText()}
+質問:${cur.q}\n答え:${a}
+中身の段階0〜3（0=抽象語だけ／1=事実はあるが質問の突いた点に答えられていない／2=質問の突いた点に具体的な事実で答えている／3=さらに限界や例外も自分から示している）。伝え方: answerFirst=最初の一文が問いへの答え, onPoint=聞かれたことに答えている, linked=主張と根拠のつながりを言葉で示している, concise=長すぎない。evidenceは答えからの引用。nextは次の一手を1文（人柄を評価しない）。
+JSON:{"level":0,"evidence":[""],"delivery":{"answerFirst":true,"onPoint":true,"linked":true,"concise":true},"next":""}`);
+      rec.eval={level:Math.max(0,Math.min(3,r.level|0)),evidence:r.evidence||[],delivery:r.delivery||{},next:r.next||""};
+      if(c&&pr){c.probes=c.probes||{};c.probes[pr.k]=Math.max(c.probes[pr.k]??-1,rec.eval.level);if(probeOk(c))hist(`「${c.claim.slice(0,30)}」が6種類の深掘りで崩れなくなった（目標線に到達）`,"面接の練習")}
+      if(rec.eval.level>=2)setAware(5,2);
+    }catch(e){rec.eval={level:null,evidence:[],delivery:{},next:aiErr(e)}}
+    busy=false}
+  render();
+};
+
+/* ---------- インターン ---------- */
+V.intern=()=>`<section class="sheet"><div class="code">インターン</div>
+  <h2>見られる場であり、こちらが会社を見る場でもある</h2>
+  ${why("インターンの2つの顔","2025年卒から、就業体験のある一定の型のインターンで企業が得た情報は、選考に使えるようになりました。一方で、インターンは会社について一番偽りにくい情報が得られる場でもあります。自分についての仮説を試す場としても使えます。")}
+  <div class="split"><label class="f">インターン先<input type="text" id="in-name"></label><div class="row" style="align-items:flex-end"><button class="btn" data-act="inAdd">加える</button></div></div>
+</section>
+${S.interns.map((n,ni)=>`<section class="sheet"><div class="row" style="justify-content:space-between"><h2>${esc(n.name)}</h2><button class="btn line" data-act="inDel" data-i="${ni}">消す</button></div>
+  <h3>前</h3>
+  <label class="f">自分について確かめたいことを1つ（自分の記録から）<select id="in-s-${ni}" data-bind="interns.${ni}.self"><option value="">選んでください</option>${S.claims.map((c,i)=>`<option value="${c.id}" ${n.self===c.id?"selected":""}>#${i+1} ${esc(c.claim.slice(0,40))}</option>`).join("")}</select></label>
+  <label class="f">会社について確かめたいことを1つ<select id="in-c-${ni}" data-bind="interns.${ni}.co"><option value="">選んでください</option>${S.companies.flatMap((c,ci)=>(c.qs||[]).map((x,qi)=>`<option value="${ci}-${qi}" ${n.co===ci+"-"+qi?"selected":""}>${esc(c.name)}：${esc(x.q.slice(0,36))}</option>`)).join("")}</select></label>
+  <label class="f">それを、いつ・どこで・何をして確かめますか<input type="text" id="in-p-${ni}" data-bind="interns.${ni}.plan" value="${esc(n.plan||"")}"></label>
+  <h3>最中</h3><p class="note">その日のことは「日々の記録」に1分で残してください。</p><div class="row"><button class="btn line" data-go="log">日々の記録へ</button></div>
+  <h3>後</h3>
+  <label class="f">自分について確かめたかったことは、どうなりましたか<input type="text" id="in-rs-${ni}" data-bind="interns.${ni}.resSelf" value="${esc(n.resSelf||"")}"></label>
+  <label class="f">会社について確かめたかったことは、どうなりましたか<input type="text" id="in-rc-${ni}" data-bind="interns.${ni}.resCo" value="${esc(n.resCo||"")}"></label>
+  <div class="row"><button class="btn sub" data-act="inPost" data-i="${ni}">結果を記録に返す</button></div>
+  <p class="note">日々の記録の中で一番よく覚えている出来事は、「出来事の候補にする」から深掘りへ回せます。インターンの上司や同僚から、他人の見方を集めるのもこのタイミングです。</p>
+</section>`).join("")}`;
+ACT.inAdd=()=>{const n=$("#in-name").value.trim();if(!n)return;S.interns.push({name:n,self:"",co:"",plan:"",resSelf:"",resCo:""});render()};
+ACT.inDel=a=>{S.interns.splice(+a.dataset.i,1);render()};
+ACT.inPost=a=>{const n=S.interns[+a.dataset.i];
+  if(n.self&&n.resSelf){const c=S.claims.find(x=>x.id===n.self);if(c){c.next=(c.next?c.next+"／":"")+"インターンの結果："+n.resSelf;hist(`「${c.claim.slice(0,30)}」をインターンで試した`,n.resSelf)}}
+  if(n.co&&n.resCo){const [ci,qi]=n.co.split("-").map(Number);const x=((S.companies[ci]||{}).qs||[])[qi];if(x){x.ans=n.resCo;x.src="インターンの体験"}}
+  note("結果を自分の記録と企業の記録に返しました。");render()};
+
+/* ---------- 適性検査・GD ---------- */
+V.tests=()=>`<section class="sheet"><div class="code">適性検査</div>
+  <h2>何を測り、なぜ使われるか</h2>
+  <p>適性検査は、考える力の検査と性格検査でできています。多くの応募を安くふるい分けるために使われる面が強い手段です。考える力の検査の対策は、このアプリでは扱いません（問題集などを使ってください）。</p>
+  ${why("性格検査は、正直に、一貫して","良く見せようとして答えると、回答の矛盾や、面接での話との食い違いが出やすくなります。実際と違う自分で採用されると、入社後に困るのはあなたです。答える前に、自分の記録を見直しておくと、一貫して答えやすくなります。")}
+  ${S.claims.filter(c=>c.type==="A"||c.type==="D").map(c=>`<div class="stmt"><span class="tag">${c.type}</span>${esc(c.claim)}</div>`).join("")||'<p class="note">自分の記録（AとD）ができると、ここに表示されます。</p>'}
+</section>
+<section class="sheet"><div class="code">グループ討議</div>
+  <h2>見られているのは、集団の中での実際のふるまい</h2>
+  <p>グループ討議は、その場のふるまいが見られるので、エピソードの準備は効きません。一人でも練習できるのは、考える部分（論点の整理、議論の進め方、時間内の結論）です。人と関わる部分は、実際の練習の場で確かめてください。</p>
+  <p class="note">発言の量が多い人が高く見られやすい、というゆがみがあることも知っておいてください。</p>
+  <div class="row"><button class="btn line" data-act="gdTrain">考える部分を練習する</button></div>
+</section>`;
+ACT.gdTrain=()=>{S.train={sk:"グループ討議の進め方",task:"",ans:"",fb:""};S.view="train";render()};
+
+/* ---------- 育てる ---------- */
+function gaps(){
+  const g=[];
+  STEPS.filter(s=>s.rubric).forEach(s=>{const d=S.deep[s.id];if(d&&d.done&&d.level!=null&&d.level<2)g.push({src:"深掘り",what:`「${s.title}」が段階${d.level}のまま`})});
+  const m=ep(S.main),sb=ep(S.sub);if(m&&sb&&!m.group&&!sb.group)g.push({src:"ES",what:"他の人と一緒に取り組んだ出来事がない（チームで取り組んだ経験の材料）"});
+  if(S.claims.length&&!S.claims.some(c=>c.type==="A"&&c.cert>=1))g.push({src:"自分の記録",what:"2つ以上の場面で確かめられた行動のパターンがない"});
+  S.claims.filter(c=>c.use&&!probeOk(c)).forEach(c=>{const weak=PROBES.filter(p=>((c.probes||{})[p.k]??-1)<2).map(p=>p.t);g.push({src:"面接",what:`「${c.claim.slice(0,30)}」が、まだ崩れる深掘り：${weak.join("・")}`})});
+  S.companies.forEach(c=>(c.qs||[]).filter(x=>x.status==="合わない"&&x.fit===FITS[2]).forEach(x=>g.push({src:"企業",what:`${c.name}：仕事で求められることと合わない（${x.q}）`})));
+  AWARE.filter(a=>S.aware[a.k].level<2).forEach(a=>g.push({src:"自覚",what:`「${a.name}」が段階${S.aware[a.k].level}`}));
+  return g;
+}
+V.grow=()=>{const g=gaps();return `<section class="sheet"><div class="code">育てる</div>
+  <h2>まだ見えていないところ</h2>
+  ${g.length?`<div class="tablewrap"><table><thead><tr><th>見つけた場所</th><th>内容</th></tr></thead><tbody>${g.map(x=>`<tr><td><span class="tag">${esc(x.src)}</span></td><td>${esc(x.what)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="ok-banner">今のところ、目立つ穴は見つかっていません。</div>'}
+  </section>
+  <section class="sheet"><h3>1. まず見分ける：思い出せていないだけか、本当にないか</h3>
+  <p class="note">「過去を掘り起こす」の表のすべての枠で手がかりの問いを試しても出てこなければ、本当にまだない、と考えます。</p><div class="row"><button class="btn line" data-go="recall">過去を掘り起こすへ</button></div></section>
+  <section class="sheet"><h3>2. 本当にないなら、育てる</h3>
+  <div class="split"><div class="card"><b>道1：経験をつくる</b><p class="note">これからのインターンやアルバイトで、自分で選べる余地があり、困難や手間があり、人と関わる役割を選びます。経験したら日々の記録に残し、深掘りに戻ります。経験を作ったり盛ったりして語ることはすすめません。</p></div>
+  <div class="card"><b>道2：力を鍛える</b><p class="note">論理的に話す力や伝える力は、その場の受け答えに出ます。思考トレで、少し上の課題に、すぐ評価を受けながら繰り返し取り組みます。</p><div class="row"><button class="btn line" data-go="train">思考トレへ</button></div></div></div>
+  <label class="f">今の状況（例：長期インターン中、週3でカフェのアルバイト）<input type="text" id="grow-ctx" data-bind="growCtx" value="${esc(S.growCtx)}"></label>
+  <div class="row"><button class="btn" data-act="growPlan" ${g.length?"":"disabled"}>次の一手を考えてもらう</button>${spin()}</div>
+  ${S.grow?`<div class="tablewrap"><table><thead><tr><th>穴</th><th>道</th><th>いつ・どこで・何をするか</th></tr></thead><tbody>${S.grow.map(x=>`<tr><td>${esc(x.gap)}</td><td><span class="tag">${esc(x.path)}</span></td><td>${esc(x.action)}</td></tr>`).join("")}</tbody></table></div>`:""}
+  </section>`};
+ACT.growPlan=async()=>{const g=gaps();
+  if(!AI){S.grow=g.map(x=>({gap:x.what,path:x.src==="面接"||x.src==="自覚"?"力":"経験",action:"今の活動の中で、いつ・どこで・何をするかを自分で書いてください"}));render();return}
+  busy=true;render();
+  try{const r=await aiJSON(`就活生の「まだ見えていない材料」に対して、実際の経験と力を育てる次の一手を考える。作り話や誇張はすすめない。経験をつくる場合は、今の状況の中で、自分で選べる余地・困難や手間・人との関わりがある役割や場面を具体的に。力を鍛える場合は練習を具体的に。actionは「いつ・どこで・何をするか」の形で1〜2文。
+今の状況:${S.growCtx||"（未記入）"}\n仮説:\n${claimsText()}\n穴:\n${g.map(x=>"- "+x.what).join("\n")}
+JSON:{"suggestions":[{"gap":"","path":"経験","action":""}]}`);S.grow=r.suggestions||[]}catch(e){note(aiErr(e))}
+  busy=false;render()};
+
+/* ---------- 思考トレ ---------- */
+V.train=()=>{const t=S.train;return `<section class="sheet"><div class="code">思考トレ</div>
+  <h2>その場の受け答えに出る力を鍛える</h2>
+  <div class="row">${Object.keys(SKILLS).map(k=>`<button class="chip ${t.sk===k?"on":""}" data-act="skSel" data-k="${esc(k)}">${esc(k)}</button>`).join("")}</div>
+  ${t.sk?`${why(t.sk,SKILLS[t.sk].l)}<div class="row"><button class="btn" data-act="skTask">お題を出してもらう</button>${spin()}</div>`:""}
+  ${t.task?`<div class="q">${esc(t.task)}</div><textarea id="sk-ans" data-bind="train.ans">${esc(t.ans)}</textarea><div class="row"><button class="btn" data-act="skGrade" ${AI?"":"disabled"}>評価してもらう</button></div>`:""}
+  ${t.fb?`<div class="judge" style="white-space:pre-wrap">${esc(t.fb)}</div>`:""}</section>`};
+ACT.skSel=a=>{S.train={sk:a.dataset.k,task:"",ans:"",fb:""};render()};
+ACT.skTask=async()=>{const t=S.train;if(!AI){t.task="身近なテーマを1つ選び、"+SKILLS[t.sk].t.replace("させる","てみてください");render();return}
+  busy=true;render();try{t.task=await aiText(`就活生向けの思考トレーニング。「${t.sk}」を鍛えるお題を1問だけ。方針：${SKILLS[t.sk].t}。5分以内で書ける難易度。毎回違う題材（${uid()}）。お題の文章だけを出力。`);t.ans="";t.fb=""}catch(e){t.fb=aiErr(e)}busy=false;render()};
+ACT.skGrade=async()=>{const t=S.train;if(!t.ans.trim())return;busy=true;render();
+  try{t.fb=await aiText(`「${t.sk}」のお題への回答を評価する。形式：\n■目指すところ（このお題でできてほしいこと、1文）\n■今の位置（できている点を回答から引用して1〜2つ）\n■次の一手（直すと良くなる点を1つ、短い例つき）\nお題：${t.task}\n回答：${t.ans}`)}catch(e){t.fb=aiErr(e)}busy=false;render()};
+
+/* ---------- 伸びの記録 ---------- */
+const SELF4=["これからの就活やキャリアについて、考えておくべきことが分かっている","自分の進路を、自分で決められると思う","自分に合いそうな仕事や会社を、自分から調べている","選考で求められることに、自分は応えられると思う"];
+V.growth=()=>{
+  const used=S.claims.filter(c=>c.use);
+  return `<section class="sheet"><div class="code">伸びの記録</div>
+  <h2>比べる相手は、過去の自分</h2>
+  <p class="note">他の人との比較や順位は出しません。点数を上げることが目的にならないよう、根拠つきの記録として見てください。</p>
+  <div class="tablewrap"><table><thead><tr><th>見るもの</th><th>今</th></tr></thead><tbody>
+  <tr><td>自覚の6項目（段階2以上）</td><td>${AWARE.filter(a=>S.aware[a.k].level>=2).length}/6</td></tr>
+  <tr><td>自分の記録の仮説</td><td>${S.claims.length}（2つの場面で確認 ${S.claims.filter(c=>c.cert===1).length}・他人も確認 ${S.claims.filter(c=>c.cert===2).length}）</td></tr>
+  <tr><td>選考で使う仮説のうち、6種類の深掘りで崩れないもの</td><td>${used.filter(probeOk).length}/${used.length}</td></tr>
+  <tr><td>企業の記録：必須の条件をすべて偽りにくい情報で確かめた会社</td><td>${S.companies.filter(mustDone).length}/${S.companies.length}</td></tr>
+  <tr><td>日々の記録</td><td>${S.logs.length}</td></tr>
+  <tr><td>面接の練習</td><td>${S.practice.length}</td></tr>
+  </tbody></table></div></section>
+  <section class="sheet"><h3>ときどき、4つの問いに答える</h3>
+  <p class="note">キャリア適応力（将来への関心・自分で決める・探す・できると思える）の考え方をもとにした、簡単な目安です。研究で使われる尺度そのものではありません。使い始めと、しばらくたってから答えると、自分の変化が見えます。</p>
+  ${SELF4.map((q,i)=>`<label class="f">${esc(q)}<select id="s4-${i}">${["","1 そう思わない","2","3","4","5 そう思う"].map(o=>`<option>${o}</option>`).join("")}</select></label>`).join("")}
+  <div class="row"><button class="btn sub" data-act="s4Save">記録する</button></div>
+  ${S.checks.length?`<div class="tablewrap"><table><thead><tr><th>日付</th>${SELF4.map((_,i)=>`<th>問${i+1}</th>`).join("")}</tr></thead><tbody>${S.checks.map(c=>`<tr><td class="code">${esc(c.date)}</td>${c.v.map(v=>`<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:""}
+  </section>
+  <section class="sheet"><h3>変えた記録</h3>
+  ${S.history.length?`<div class="tablewrap"><table><thead><tr><th>日付</th><th>変えたこと</th><th>きっかけ</th></tr></thead><tbody>${S.history.map(l=>`<tr><td class="code">${esc(l.date)}</td><td>${esc(l.what)}</td><td>${esc(l.why||"—")}</td></tr>`).join("")}</tbody></table></div>`:'<p class="note">まだありません。この記録は、そのまま「どういう環境で、どうやって成長したか」の材料になります。</p>'}
+  </section>
+  <section class="sheet"><h3>使ってみてどうでしたか</h3>
+  <div class="split"><label class="f">手間は<select id="rx-1"><option></option><option>軽い</option><option>ちょうどいい</option><option>重い</option></select></label>
+  <label class="f">また使いたいか<select id="rx-2"><option></option><option>使いたい</option><option>どちらでもない</option><option>使いたくない</option></select></label></div>
+  <div class="row"><button class="btn line" data-act="rxSave">記録する</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn line" data-act="resetAsk">最初からやり直す</button></div>
+  ${S._reset?`<div class="banner">すべての記録を消します。元に戻せません。<div class="row"><button class="btn" data-act="resetDo">消して最初から</button><button class="btn line" data-act="resetNo">やめる</button></div></div>`:""}
+  </section>`};
+ACT.s4Save=()=>{const v=SELF4.map((_,i)=>($("#s4-"+i).value||"").slice(0,1));if(v.every(x=>!x))return;S.checks.unshift({date:today(),v});note("記録しました。");render()};
+ACT.rxSave=()=>{S.reactions.unshift({date:today(),cost:$("#rx-1").value,again:$("#rx-2").value});note("ありがとうございます。記録しました。");render()};
+ACT.resetAsk=()=>{S._reset=true;render()};ACT.resetNo=()=>{S._reset=false;render()};ACT.resetDo=()=>{S=blank();render()};
+
+render();
+</script>
