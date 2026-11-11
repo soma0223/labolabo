@@ -82,6 +82,12 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--sheet);border-t
   padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:5}
 nav.tabs button{all:unset;cursor:pointer;flex:1 1 0;max-width:128px;text-align:center;padding:8px 2px;border-radius:9px;font-size:var(--t-xs);font-weight:700;color:var(--muted)}
 nav.tabs button.on{background:var(--accent-soft);color:var(--accent)}
+.beat{width:30px;height:30px;border-radius:50%;margin:0 auto;background:var(--rule)}
+.beat.on{background:var(--accent)}
+.msg{white-space:pre-wrap;padding:var(--s3);border-radius:10px;font-size:var(--t-s);border:1px solid var(--rule)}
+.msg.me{background:var(--accent-soft);border-color:transparent;margin-left:var(--s5)}
+textarea,input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:8px 10px}
+textarea{width:100%;min-height:72px;resize:vertical}
 @media (prefers-reduced-motion:no-preference){.bar>i{transition:width .1s linear}}
 </style>
 
@@ -150,7 +156,7 @@ function detect(){ if(!analyser) return {f:0,rms:0}; analyser.getFloatTimeDomain
 function tone(m,ms,when){
   ensureAC(); var t=ac.currentTime+(when||0)/1000, d=ms/1000;
   var o=ac.createOscillator(), g=ac.createGain(); o.type='triangle'; o.frequency.value=440*Math.pow(2,(m-69)/12);
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.28,t+0.03); g.gain.setValueAtTime(0.28,t+d-0.12); g.gain.linearRampToValueAtTime(0,t+d-0.02);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.28,t+0.03); g.gain.setValueAtTime(0.28,t+Math.max(0.03,d-0.12)); g.gain.linearRampToValueAtTime(0,t+Math.max(0.05,d-0.02));
   o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+d);
 }
 function f2m(f){return 69+12*Math.log(f/440)/Math.LN2;}
@@ -431,7 +437,7 @@ function sprOf(b,sr){
   return lo>0&&hi>0? 10*Math.log(hi/lo)/Math.LN10 : -60;
 }
 function wrap(c){return ((c+50)%100+100)%100-50;}
-function analyzeTake(fr){
+function analyzeTake(fr,grid){
   var i, pts=fr.map(function(x){return {t:x.t,m:x.f?f2m(x.f):null,rms:x.rms,ap:x.ap,spr:x.spr};});
   var raw=pts.map(function(p){return p.m;});
   for(i=1;i<pts.length-1;i++) if(raw[i-1]!=null&&raw[i]!=null&&raw[i+1]!=null) pts[i].m=median([raw[i-1],raw[i],raw[i+1]]);
@@ -490,9 +496,19 @@ function analyzeTake(fr){
   M.ap=median(voiced.map(function(p){return p.ap||0;}));
   var sp=voiced.filter(function(p){return p.spr!=null;}).map(function(p){return p.spr;}); M.spr=sp.length?median(sp):null;
   var db=voiced.map(function(p){return 20*Math.log(p.rms)/Math.LN10;}); M.dyn=pct(db,0.9)-pct(db,0.1);
+  /* リズム：元の曲とは比べられないので、歌い出しが拍の刻みにどれだけそろっているかを見る。機械の遅れは全体のずれとして引く */
+  M.rhythm=null;
+  if(grid&&notes.length>=8){
+    var cm=function(a){var x=0,y=0;a.forEach(function(n){var th=2*Math.PI*n.t0/grid;x+=Math.cos(th);y+=Math.sin(th);});return Math.atan2(y,x)/(2*Math.PI)*grid;};
+    var wg=function(d){return ((d+grid/2)%grid+grid)%grid-grid/2;};
+    var sh=cm(notes), hf=notes.length>>1;
+    M.rhythm={spread:notes.reduce(function(p,n){return p+Math.abs(wg(n.t0-sh));},0)/notes.length,lean:wg(cm(notes.slice(hf))-cm(notes.slice(0,hf))),thr:Math.min(35,grid*0.18)};
+  }
+  M.list=notes.map(function(n){return nname(n.center)+','+Math.round(n.dur)+','+Math.round(n.r)+','+Math.round(n.onset);});
   /* 重さ：しきい値で割った値。しきい値はすべて目安として置いたもの */
   var sev={pitch:M.dev/17, onset:M.scoop/0.4, wob:M.wob==null?null:M.wob/20, drift:M.drift==null?null:-M.drift/25,
-    high:M.high?Math.max(-M.high.flat/15,M.high.dev/12):null, breathy:M.ap/0.06, dark:M.spr==null?null:-M.spr/27, dyn:0.7*6/Math.max(M.dyn,0.1)};
+    high:M.high?Math.max(-M.high.flat/15,M.high.dev/12):null, breathy:M.ap/0.06, dark:M.spr==null?null:-M.spr/27, dyn:0.7*6/Math.max(M.dyn,0.1),
+    rhythm:M.rhythm?Math.max(M.rhythm.spread/M.rhythm.thr,Math.abs(M.rhythm.lean)/(M.rhythm.thr*1.2)):null};
   var ids=Object.keys(sev).filter(function(k){return sev[k]!=null;});
   ids.forEach(function(k){sev[k]=Math.min(sev[k],2.5);});
   M.sev=sev;
@@ -535,23 +551,48 @@ var ISSUE={
   why:'全部が同じ大きさだと、平らに聞こえます。',
   tip:'フレーズの中で、いちばん聞かせたい言葉を1つ決めます。そこへ向かって大きくし、過ぎたら小さくします。',go:null}
 };
-var recorder=null;
+ISSUE.rhythm={w:1,short:'リズム',title:'歌い出しのタイミングが、拍からばらつく',good:'タイミングが拍にそろっています',
+  val:function(M){var l=Math.round(M.rhythm.lean);return '拍の刻みからのばらつき：'+Math.round(M.rhythm.spread)+'ミリ秒（'+Math.round(M.rhythm.thr)+'を超えると目立つ）。後半は前半より'+(Math.abs(l)<15?'ほぼ同じ':Math.abs(l)+'ミリ秒'+(l<0?'早い（走っている）':'遅い（もたっている）'));},
+  why:'拍を体で感じる前に、言葉とメロディーを追って歌っています。',
+  tip:'歌う前に、足で拍を踏みます。拍が体に入ってから歌い出します。',go:null};
+/* 世界で広く使われている指導法から取った練習。[名前, どの指導法か, やり方] */
+var DRILL={
+ pitch:['ハミングで合わせてから開く','コダーイ・メソッド／頭の中で音を鳴らす練習（Gordon）','お手本の音を頭の中で鳴らし、口を閉じた「んー」で合わせます。合ったら、そのまま「あー」に開きます。'],
+ onset:['3つの出だしを比べる','Richard Miller の出だしの練習','息が先に出る「は」、喉を詰めた「っあ」、同時に始まる「あ」を順に出して、違いを聞き分けます。そのあと3つ目だけを5回続けます。'],
+ wob:['メッサ・ディ・ヴォーチェ','ベルカント唱法','出しやすい1音を、小さく始めて、少しずつ大きくし、また小さくして終えます。音の高さを変えずに8秒かけます。'],
+ drift:['「スッ・スッ・スー」','アッポッジョ（Lamperti、Miller）','短く2回「スッ」と吐いてから、長く「スー」と吐きます。短く吐くときにお腹まわりが外へ張るのを感じ、その張りを長い息の最後まで保ちます。'],
+ high:['「ネイ・ネイ」と「マム・マム」','Speech Level Singing（Seth Riggs）','意地悪な声の「ネイ」で、ド・ミ・ソ・上のド・ソ・ミ・ドと上がって下ります。喉が締まらずに上まで行けたら、同じ形を「マム」でやります。音量は話し声くらいにします。'],
+ breathy:['「グッ・グッ・グー」','Speech Level Singing／Estill Voice Training','「グッ」と短く、はっきり言います。「グ」で声帯が閉じます。そのまま「グッ・グッ・グー」と伸ばして、芯のある声を覚えます。'],
+ dark:['「んー」から「ニャー」','Estill のトワング／Complete Vocal Technique','「んー」とハミングして、鼻のあたりが震えるのを確かめます。そのまま「ニャー」と開きます。きつめの明るい声が出たら、それを2割だけ歌に混ぜます。'],
+ dyn:['歌詞を朗読してから歌う','Speech Level Singing の「話すように歌う」','歌詞を、人に話しかけるように声に出して読みます。自然に強くなる言葉を見つけて、歌でも同じ場所を強くします。'],
+ rhythm:['足で拍を踏んで、歌詞をリズム読み','ダルクローズのリトミック／コダーイ・メソッド','足で拍を踏みながら、歌詞をメロディーなしで、リズムどおりに読みます。そろったら、足を踏んだままメロディーを付けます。']
+};
+var recorder=null, taps=[];
 function recStop(){ if(recorder&&recorder.state!=='inactive'){ try{recorder.stop();}catch(e){} } }
 function singGo(){
   stopAll(); var my=runId; K={phase:'rec'};
   micOn().then(function(mic){
     if(my!==runId) return;
     if(!mic){ K=null; render(); return; }
-    render();
-    try{ var chunks=[]; recorder=new MediaRecorder(micStream); recorder.ondataavailable=function(e){chunks.push(e.data);};
-      recorder.onstop=function(){ if(K&&K.phase!=='rec'&&chunks.length){ K.url=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType})); if(tab==='sing') render(); } };
-      recorder.start(); }catch(e){ recorder=null; }
-    capFull=true;
-    capture(20000,function(t,r){
-      var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,t/200)+'%';
-      var hd=document.getElementById('hear'); if(hd){hd.className='hear'+(r.f?' on':'');hd.textContent=r.f?'聞こえています':'声を待っています';}
-    }).then(function(fr){ capFull=false; K.phase='result'; recStop(); takeDone(analyzeTake(fr)); });
+    var beat=S.rhy?60000/(S.bpm||90):0; K.beat=beat; K.grid=beat?((S.bpm||90)>110?beat/2:beat/4):0;
+    if(!beat){ startRec(my); return; }
+    K.phase='count'; render(); for(var i=0;i<4;i++) tone(84,90,i*beat);
+    var t0=performance.now();
+    (function cnt(){ if(my!==runId||K.phase!=='count') return; var el=document.getElementById('cnt'); if(el) el.textContent=Math.min(4,Math.floor((performance.now()-t0)/beat)+1); requestAnimationFrame(cnt); })();
+    sleep(4*beat).then(function(){ if(my!==runId) return; K.phase='rec'; startRec(my); });
   });
+}
+function startRec(my){
+  render();
+  try{ var chunks=[]; recorder=new MediaRecorder(micStream); recorder.ondataavailable=function(e){chunks.push(e.data);};
+    recorder.onstop=function(){ if(K&&K.phase!=='rec'&&chunks.length){ K.url=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType})); if(tab==='sing') render(); } };
+    recorder.start(); }catch(e){ recorder=null; }
+  capFull=true;
+  capture(20000,function(t,r){
+    var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,t/200)+'%';
+    var hd=document.getElementById('hear'); if(hd){hd.className='hear'+(r.f?' on':'');hd.textContent=r.f?'聞こえています':'声を待っています';}
+    var bd=document.getElementById('beat'); if(bd) bd.className='beat'+((t%K.beat)<K.beat*0.18?' on':'');
+  }).then(function(fr){ capFull=false; K.phase='result'; recStop(); takeDone(analyzeTake(fr,K.grid)); });
 }
 function singFile(file){
   stopAll(); var my=runId; K={phase:'load',url:URL.createObjectURL(file)}; render(); ensureAC();
@@ -565,7 +606,7 @@ function singFile(file){
         if(my!==runId) return;
         for(var c=0;c<120&&pos<end;c++,pos+=hop){ var sub=d.subarray(pos,pos+2048), r=yin(sub,sr); if(r.f) r.spr=sprOf(sub,sr); fr.push({t:pos/sr*1000,f:r.f,rms:r.rms,ap:r.ap,spr:r.spr}); }
         var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,pos/Math.max(end,1)*100)+'%';
-        if(pos<end) setTimeout(chunk,0); else { K.phase='result'; takeDone(analyzeTake(fr)); }
+        if(pos<end) setTimeout(chunk,0); else { K.phase='result'; takeDone(analyzeTake(fr,0)); }
       })();
     },function(){ if(my===runId){K={err:'この形式の音声は読めませんでした。m4a・mp3・wav を試してください。'};render();} });
   };
@@ -581,12 +622,15 @@ function vSing(){
   if(!K||K.err){
     h+=micNote()+'<section class="sheet"><h2>歌って分析</h2><p>好きな曲の一部を、<b>伴奏なしで10〜20秒</b>歌います。歌い終わると、いま直すところを最大2つ返します。</p>'+(K&&K.err?'<div class="warnbox">'+K.err+'</div>':'')+
       '<div class="row"><button class="btn big" data-act="singGo">録音して分析する</button></div>'+
+      '<h3>リズム</h3><div class="row"><button class="btn line'+(S.rhy?' on':'')+'" data-act="rhy">リズムも見る</button>'+(S.rhy?'<label class="note" for="bpm">テンポ</label><input type="number" id="bpm" min="50" max="200" value="'+(S.bpm||90)+'" style="width:5.5em"><button class="btn line" data-act="tap">タップで合わせる</button>':'')+'</div>'+
+      (S.rhy?'<p class="note">最初に4拍のカウントが鳴ります。その後は音を出さず、画面の丸が拍を示します。曲のテンポは、曲を思い浮かべながら「タップで合わせる」を拍ごとに4回以上押すと入ります。</p>':'<p class="note">元の曲と比べる方法がないので、リズムは拍に合わせて歌ったときだけ見られます。</p>')+
       '<h3>録音したファイルを使う</h3><p class="note">スマホの録音アプリなどで録った歌声を選びます。マイクが使えない場所でも分析できます（最初の45秒まで）。</p><input type="file" id="file" accept="audio/*">'+
       '<p class="note">伴奏やイヤホンから漏れた音が入ると、正しく分析できません。静かな場所で、声だけを録ります。</p></section>';
     if(S.takes.length){ var k=S.takes[S.takes.length-1]; h+='<section class="sheet"><h3>前回の直すところ</h3><p>'+(k.top.length?k.top.map(function(id){return ISSUE[id].title;}).join('／'):'目立つところはありませんでした')+'</p><p class="note">今回は、そこだけを意識して歌ってみます。一度に直すのは1つか2つまでにします。</p></section>'; }
     return h;
   }
-  if(K.phase==='rec') return '<section class="sheet"><div class="phase c-ok">歌う</div><div class="bar"><i id="bar"></i></div><div class="hear" id="hear">声を待っています</div><div class="row"><button class="btn big" data-act="singStop">止めて分析する</button></div><p class="note">最大20秒で自動的に止まります。</p></section>';
+  if(K.phase==='count') return '<section class="sheet"><div class="phase">カウント <span id="cnt">1</span></div><p class="note" style="text-align:center">4のあとに歌い始めます。</p></section>';
+  if(K.phase==='rec') return '<section class="sheet"><div class="phase c-ok">歌う</div>'+(K.beat?'<div class="beat" id="beat"></div>':'')+'<div class="bar"><i id="bar"></i></div><div class="hear" id="hear">声を待っています</div><div class="row"><button class="btn big" data-act="singStop">止めて分析する</button></div><p class="note">最大20秒で自動的に止まります。</p></section>';
   if(K.phase==='load') return '<section class="sheet"><div class="phase">分析しています</div><div class="bar"><i id="bar"></i></div></section>';
   var M=K.M, audio=K.url?'<audio controls src="'+K.url+'" style="width:100%"></audio>':'';
   if(M.short) return '<section class="sheet"><h2>分析できませんでした</h2><p>歌声が短いか、うまく拾えませんでした。声の出ている時間が3秒以上、音が4つ以上になるように歌います。</p>'+audio+'<div class="row"><button class="btn big" data-act="singNew">もう一度</button></div></section>';
@@ -595,11 +639,12 @@ function vSing(){
     (M.good&&ISSUE[M.good].good&&M.sev[M.good]<0.8?'<p><b class="c-ok">良かったところ：</b>'+ISSUE[M.good].good+'。</p>':'')+'</section>';
   if(!M.top.length) h+='<section class="sheet"><h2>直すところ</h2><p>今回見た項目の中に、目立つ問題はありませんでした。別の曲や、もっと高い音のある部分でも試します。</p></section>';
   M.top.forEach(function(id,i){ var I=ISSUE[id];
-    h+='<section class="sheet"><span class="code">直すところ '+(i+1)+'</span><h2>'+I.title+'</h2><dl class="kv"><dt>今の位置</dt><dd>'+I.val(M)+'</dd><dt>なぜ起きるか</dt><dd>'+I.why+'</dd><dt>次の一手</dt><dd>'+I.tip+'</dd></dl>'+(I.go?'<div class="row"><button class="btn sub" data-act="go" data-v="'+I.go[0]+'">'+I.go[1]+'</button></div>':'')+'</section>'; });
+    h+='<section class="sheet"><span class="code">直すところ '+(i+1)+'</span><h2>'+I.title+'</h2><dl class="kv"><dt>今の位置</dt><dd>'+I.val(M)+'</dd><dt>なぜ起きるか</dt><dd>'+I.why+'</dd><dt>次の一手</dt><dd>'+I.tip+'</dd><dt>練習</dt><dd><b>'+DRILL[id][0]+'</b>：'+DRILL[id][2]+'<br><span class="tag mid">'+DRILL[id][1]+'</span></dd></dl>'+(I.go?'<div class="row"><button class="btn sub" data-act="go" data-v="'+I.go[0]+'">'+I.go[1]+'</button></div>':'')+'</section>'; });
+  h+=vChat();
   var rows=Object.keys(ISSUE).filter(function(id){return M.sev[id]!=null;}).map(function(id){ var s=M.sev[id]; return '<tr><td>'+ISSUE[id].short+'</td><td>'+ISSUE[id].val(M)+'</td><td><span class="tag '+(s>1?'weak':s>0.8?'mid':'')+'">'+(s>1?'直す':s>0.8?'もう少し':'良い')+'</span></td></tr>'; }).join('');
   h+='<section class="sheet"><div class="row"><button class="btn big" data-act="singNew">もう一度歌う</button></div>'+
     '<details><summary>見た項目すべて</summary><div><div class="scroll"><table>'+rows+'</table></div></div></details>'+
-    '<details><summary>この分析でわかること・わからないこと</summary><div><ul><li>元の曲のメロディーとは比べていません。歌った音が、それぞれいちばん近い音の真ん中からどれだけ外れているかを見ています。音そのものを間違えていても、ここではわかりません。</li><li>リズムは見ていません。</li><li>「直す」の区切りは、目安として置いた値です。確かな基準ではありません。比べる相手は過去の自分にします。</li><li>響きと息もれの数字は、マイクと部屋で変わります。</li><li>原因とコツの対応は、指導の経験則と推論です。</li></ul></div></details></section>';
+    '<details><summary>この分析でわかること・わからないこと</summary><div><ul><li>元の曲のメロディーとは比べていません。歌った音が、それぞれいちばん近い音の真ん中からどれだけ外れているかを見ています。音そのものを間違えていても、ここではわかりません。</li><li>リズムは「リズムも見る」をオンにして録音したときだけ見ます。元の曲と比べているのではなく、歌い出しが拍の刻みにそろっているかを見ています。</li><li>「直す」の区切りは、目安として置いた値です。確かな基準ではありません。比べる相手は過去の自分にします。</li><li>響きと息もれの数字は、マイクと部屋で変わります。</li><li>原因とコツの対応は、指導の経験則と推論です。</li></ul></div></details></section>';
   return h;
 }
 function drawTake(cv,M){
@@ -671,13 +716,17 @@ var LEARN=[
  ['カラオケの点数',[['weak','配点の詳細は公開されていない']],
   ['採点の中心は音程です。そのほかに、安定性、ロングトーン、ビブラート、抑揚などが見られます。',
    '点数は結果なので、直接は追いません。音程のずれと声のぶれが減れば、点数は後からついてきます。']],
+ ['世界の指導法と、このアプリでの使い方',[['mid','指導の現場で広く使われている'],['weak','方法どうしを比べた研究は少ない']],
+  ['「歌って分析」で出る練習は、次の指導法から取っています。',
+   '<ul><li><b>Speech Level Singing（Seth Riggs）：</b>話すときと同じ楽な喉の位置のまま、低い音から高い音まで通す。「ネイ」「マム」「グッ」の音階練習。</li><li><b>Estill Voice Training（Jo Estill）：</b>声を作る部分を1つずつ切り分けて動かす。明るい響きの「トワング」、声帯の厚い・薄いの使い分け。</li><li><b>Complete Vocal Technique（Cathrine Sadolin）：</b>3つの基本（支え、必要なトワング、あごと唇を固めない）を先に置く。</li><li><b>ベルカント唱法とアッポッジョ（Lamperti、Richard Miller）：</b>息の支え、そろった出だし、1音の中で強弱をつけるメッサ・ディ・ヴォーチェ。</li><li><b>半閉鎖声道エクササイズ（Ingo Titze）：</b>ストロー発声。この中では研究の裏づけがいちばん厚い。</li><li><b>コダーイ・メソッド、Gordon、ダルクローズ：</b>歌う前に頭の中で音を鳴らす。拍を体で感じる。</li></ul>',
+   '流派によって言い方は違いますが、「息を安定させる」「喉を締めない」「響きを前に出す」はほぼ共通しています。このアプリは、その共通部分を土台にしています。']],
  ['喉を守る',[['','声の医学の一般的な知識']],
   ['<ul><li>痛みやかすれがある日は歌いません。</li><li>練習は短く分けます。張り上げる練習を長く続けません。</li><li>水をこまめに飲みます。</li><li>かすれが2週間以上続くときは、耳鼻咽喉科で診てもらいます。</li></ul>']]
 ];
 function vLearn(){
   return '<section class="sheet"><h2>仕組みとコツ</h2><p class="note">それぞれに、根拠の強さを付けています。</p>'+LEARN.map(function(L){
     return '<details><summary>'+L[0]+'</summary><div>'+L[2].map(function(p){return p.charAt(0)==='<'&&p.slice(0,3)==='<ul'?p:'<p>'+p+'</p>';}).join('')+'<p>'+tags(L[1])+'</p></div></details>';
-  }).join('')+'</section>';
+  }).join('')+'</section>'+vChat();
 }
 
 /* ---------- 記録 ---------- */
@@ -727,6 +776,13 @@ var ACT={
   singGo:function(){singGo();},
   singStop:function(){capStop=true;},
   singNew:function(){K=null;render();window.scrollTo(0,0);},
+  rhy:function(){S.rhy=!S.rhy;save();render();},
+  tap:function(){var n=performance.now(); if(taps.length&&n-taps[taps.length-1]>2000) taps=[]; taps.push(n); if(taps.length>=4){S.bpm=Math.max(50,Math.min(200,Math.round(60000/((taps[taps.length-1]-taps[0])/(taps.length-1)))));save();var el=document.getElementById('bpm');if(el)el.value=S.bpm;}},
+  aiCoach:function(){ask('今回の歌の測定を見て、いちばんの原因の見立てと、今日やる練習を順番つきで教えて。');},
+  aiAsk:function(){var q=document.getElementById('q'); if(q&&q.value.trim()) ask(q.value.trim());},
+  aiStop:function(){if(aiCtl)aiCtl.abort();},
+  aiClear:function(){CH.turns=[];CH.err='';render();},
+  copy:function(){var el=document.getElementById('sum'); if(!el) return; var done=function(){CH.err='コピーしました。Claudeとの会話に貼り付けてください。';render();}; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).then(done,function(){el.select();}); else el.select();},
   wipe:function(){wipe=true;render();},
   wipeNo:function(){wipe=false;render();},
   wipeYes:function(){K=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
@@ -735,7 +791,53 @@ document.addEventListener('click',function(e){
   var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
   var a=e.target.closest('[data-act]'); if(a&&ACT[a.dataset.act]) ACT[a.dataset.act](a.dataset);
 });
-document.addEventListener('change',function(e){ if(e.target.id==='file'&&e.target.files[0]) singFile(e.target.files[0]); });
+/* Claude との連動：claude.ai のページで開いたときだけ使える。Claude は歌声そのものは聞けないので、測った数字を渡す */
+var AI=null, CH={turns:[],busy:false,err:''}, aiCtl=null;
+var RULES='あなたは、歌の練習アプリ「うたラボ」の中で、利用者の歌の上達を手伝うコーチです。\n'+
+'【大事な前提】あなたは歌声そのものを聞いていません。アプリが録音から測った数字だけを見ています。聞いたかのような言い方はしません。数字からは言えないことは、言えないと書きます。\n'+
+'【測定の限界】元の曲のメロディーとは比べていない（各音がいちばん近い音の真ん中からどれだけ外れているかを見ている）。全体の高さのずれは引いてある。「直す」の区切りは目安として置いた値。響きと息もれの数字はマイクで変わる。リズムは拍に合わせて録音したときだけ。\n'+
+'【使える知識】音源フィルタ理論、声区（地声と裏声）、フロー発声、半閉鎖声道エクササイズ（Titze）、Speech Level Singing（Riggs）、Estill Voice Training、Complete Vocal Technique、ベルカントとアッポッジョ（Lamperti、Miller）、コダーイ、ダルクローズ、運動学習（ガイダンス仮説、注意を体の外に向ける、分散練習、交互練習）。\n'+
+'【アプリの中の練習】準備（息を一定に吐く／ストローでサイレン／出だしをそろえる）、音程（表示を見ながら→歌った後に見る→先に自分で当てる）、歌って分析。できるだけこれらに結びつけます。\n'+
+'【答え方】日本語。やさしい言葉。記号（#や*）による装飾は使わず、ふつうの文と改行だけで書く。300〜500字。直すところは一度に1つか2つまで。それぞれに「なぜそうするか」を一言添える。イメージは体の外に向けたものを優先する。根拠の強さ（研究で確かめられている／指導法として広く使われている／推論）を区別して書く。人柄ではなく行動について言う。痛みや長引くかすれは耳鼻咽喉科を勧める。\n';
+function sumText(M){ return Object.keys(ISSUE).filter(function(id){return M.sev[id]!=null;}).map(function(id){var v=M.sev[id];return ISSUE[id].short+'：'+ISSUE[id].val(M)+' → '+(v>1?'直す':v>0.8?'もう少し':'良い');}).join('\n'); }
+function ctxText(){
+  var L=[], M=K&&K.M&&!K.M.short?K.M:null;
+  if(M){ L.push('【今回の歌の測定】'+nname(M.lo)+'〜'+nname(M.hi)+'、'+M.notes+'音、ビブラート'+M.vib+'か所'); L.push(sumText(M)); L.push('音ごと（音名,長さミリ秒,真ん中からのずれセント,出だしのずれセント）：'+M.list.slice(0,40).join(' / ')); }
+  if(S.takes.length){ L.push('【これまでの分析（古い順）】'); S.takes.slice(-6).forEach(function(k){L.push(k.d+' 音のずれ'+Math.round(k.dev)+' 直すところ：'+(k.top.map(function(id){return ISSUE[id].short;}).join('・')||'なし'));}); }
+  if(S.sets.length) L.push('【音程の練習】'+S.sets.length+'セット。最初のずれ'+Math.round(S.sets[0].dev)+'、最新'+Math.round(S.sets[S.sets.length-1].dev)+'セント。表示の段階'+S.stage);
+  if(S.range) L.push('【音域】'+nname(S.range.lo)+'〜'+nname(S.range.hi));
+  return L.join('\n')||'（まだ測定はありません）';
+}
+function vChat(){
+  var M=K&&K.M&&!K.M.short?K.M:null;
+  if(!AI){
+    if(!M||tab!=='sing') return '';
+    return '<section class="sheet"><h2>Claudeに相談する</h2><p class="note">この開き方では、アプリの中から直接Claudeに聞けません。下の文面をコピーして、Claudeとの会話に貼ると、同じ相談ができます。claude.ai のページで開けば、ここから直接聞けます。</p><textarea id="sum" readonly>'+esc('歌の練習アプリの測定結果です。原因の見立てと、練習を教えてください。\n'+ctxText())+'</textarea><div class="row"><button class="btn sub" data-act="copy">文面をコピー</button></div>'+(CH.err?'<p class="note">'+CH.err+'</p>':'')+'</section>';
+  }
+  var h='<section class="sheet"><h2>Claudeに聞く</h2><p class="note">Claudeは歌声そのものは聞けません。アプリが測った数字と、これまでの記録を読んで答えます。</p>';
+  CH.turns.forEach(function(t){h+='<div class="msg'+(t.role==='user'?' me':'')+'">'+esc(t.content)+'</div>';});
+  if(CH.busy) h+='<div class="msg" id="aiout">考えています…</div><div class="row"><button class="btn line" data-act="aiStop">止める</button></div>';
+  else{
+    if(CH.err) h+='<div class="warnbox">'+CH.err+'</div>';
+    if(M&&!CH.turns.length) h+='<div class="row"><button class="btn big" data-act="aiCoach">今回の歌を見てもらう</button></div>';
+    h+='<label class="note" for="q">質問する（例：サビの高い音で喉が締まる。どう練習すればいい？）</label><textarea id="q"></textarea><div class="row"><button class="btn sub" data-act="aiAsk">送る</button>'+(CH.turns.length?'<button class="btn line" data-act="aiClear">会話を消す</button>':'')+'</div>';
+  }
+  return h+'</section>';
+}
+function ask(text){
+  if(!AI||CH.busy) return;
+  CH.turns.push({role:'user',content:text}); CH.turns=CH.turns.slice(-12); if(CH.turns[0].role!=='user') CH.turns.shift();
+  CH.busy=true; CH.err=''; render(); aiCtl=new AbortController();
+  var push=function(t){ if(t) CH.turns.push({role:'assistant',content:t}); else CH.turns.pop(); };
+  AI([{role:'user',content:RULES+'\n'+ctxText()}].concat(CH.turns),{cache:false,signal:aiCtl.signal,onText:function(o){var el=document.getElementById('aiout'); if(el) el.textContent=o.text;}})
+   .then(function(r){ push(r.text); },function(e){ push(e&&e.text);
+     if(e&&e.code==='not_granted'){ AI=null; }
+     else if(e&&e.code==='rate_limited') CH.err='少し時間をおいてから、もう一度送ってください。';
+     else if(!e||e.code!=='cancelled') CH.err='Claudeから答えを受け取れませんでした。もう一度送ってください。'; })
+   .then(function(){ CH.busy=false; render(); });
+}
+if(window.claude&&typeof window.claude.use==='function'){ try{ window.claude.use('sample').then(function(f){ if(f){AI=f; render();} },function(){}); }catch(e){} }
+document.addEventListener('change',function(e){ if(e.target.id==='bpm'){ S.bpm=Math.max(50,Math.min(200,+e.target.value||90)); save(); } if(e.target.id==='file'&&e.target.files[0]) singFile(e.target.files[0]); });
 render();
 })();
 </script>
