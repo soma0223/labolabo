@@ -107,7 +107,7 @@ textarea{width:100%;min-height:72px;resize:vertical}
 <main id="view"></main>
 <nav class="tabs" aria-label="画面">
   <button data-tab="home">きょう</button>
-  <button data-tab="warm">準備</button>
+  <button data-tab="warm">基礎</button>
   <button data-tab="sing">歌う</button>
   <button data-tab="pitch">音程</button>
   <button data-tab="learn">仕組み</button>
@@ -231,13 +231,13 @@ function word(c){return Math.abs(c)<=OKC?'合っている':(c>0?'高い':'低い
 
 /* ---------- きょう ---------- */
 function vHome(){
-  var d=day(), wdone=WARM.filter(function(w){return d.warm[w.id];}).length, psets=S.sets.filter(function(s){return s.d===today();}).length;
+  var d=day(), mm=menu(), wdone=mm.filter(function(id){return (d.menuDone||{})[id];}).length, psets=S.sets.filter(function(s){return s.d===today();}).length;
   var h='<section class="sheet"><h2>喉の調子は？</h2><div class="row">'+
     [['good','いい'],['ok','ふつう'],['bad','痛い・かれている']].map(function(o){return '<button class="btn line'+(d.throat===o[0]?' on':'')+'" data-act="throat" data-v="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div>';
-  if(d.throat==='bad') h+='<div class="warnbox">今日は歌う練習を休みます。やるなら「ストローでサイレン」を小さな声で1分だけにします。痛みやかすれが2週間以上続くときは、耳鼻咽喉科で診てもらってください。</div>';
+  if(d.throat==='bad') h+='<div class="warnbox">今日は歌う練習を休みます。「基礎」のメニューも、軽い3つだけに変わります。痛みやかすれが2週間以上続くときは、耳鼻咽喉科で診てもらってください。</div>';
   h+='</section>'+vRoad();
   h+='<section class="sheet"><h2>きょうの練習</h2><div class="steps">'+
-    '<div class="step"><span class="n">1</span><div class="t"><b>準備</b><small>息・ストロー・出だし。約2分</small></div><span class="done">'+wdone+' / 3</span><button class="btn sub" data-act="go" data-v="warm">開く</button></div>'+
+    '<div class="step"><span class="n">1</span><div class="t"><b>基礎のメニュー</b><small>体・息・喉・声区・響き・耳。その日の弱点に合わせて組みます</small></div><span class="done">'+wdone+' / '+mm.length+'</span><button class="btn sub" data-act="go" data-v="warm">開く</button></div>'+
     '<div class="step"><span class="n">2</span><div class="t"><b>歌って分析</b><small>10〜20秒歌うと、直すところを返します</small></div><span class="done">'+S.takes.filter(function(k){return k.d===today();}).length+' 回</span><button class="btn sub" data-act="go" data-v="sing">開く</button></div>'+
     '<div class="step"><span class="n">3</span><div class="t"><b>音程</b><small>5回で1セット。約3分</small></div><span class="done">'+psets+' セット</span><button class="btn sub" data-act="go" data-v="pitch">開く</button></div>'+
     '<div class="step"><span class="n">4</span><div class="t"><b>仕組み</b><small>予想して、体で試して、日をあけて思い出す</small></div><span class="done">'+(dueList().length?'復習 '+dueList().length+'問':doneCount()+' / '+LES.length)+'</span><button class="btn sub" data-act="go" data-v="learn">開く</button></div>'+
@@ -246,54 +246,11 @@ function vHome(){
     var a=S.sets[0], b=S.sets[S.sets.length-1];
     h+='<section class="sheet"><h2>最初の自分と比べる</h2><div class="nums"><div><small>最初のセットのずれ</small><b>'+Math.round(a.dev)+'</b></div><div><small>いちばん新しいセット</small><b>'+Math.round(b.dev)+'</b></div><div><small>いまの段階</small><b>'+S.stage+'</b></div></div><p class="note">数字はセント（半音の100分の1）。小さいほど合っています。</p></section>';
   }
-  h+='<section class="sheet"><h2>この順番の理由</h2><p class="note">息と声帯が安定していないと、歌っても声がぶれます。だから準備を先に置いています。次に歌って、いま直すところを知り、それに合った練習へ進みます。高い音と響きの練習は、この2つの後に足していきます。仕組みとコツは「仕組み」のタブでいつでも読めます。</p></section>';
+  h+='<section class="sheet"><h2>この順番の理由</h2><p class="note">息と声帯が安定していないと、歌っても声がぶれます。だから基礎を先に置いています。次に歌って、いま直すところを知り、それに合った練習へ進みます。高い音と響きの練習は、この2つの後に足していきます。仕組みとコツは「仕組み」のタブでいつでも読めます。</p></section>';
   return h;
 }
 
 /* ---------- 準備 ---------- */
-function vWarm(){
-  var d=day(), h=micNote();
-  WARM.forEach(function(w,i){
-    var run=W&&W.i===i;
-    h+='<section class="sheet"><div class="row" style="justify-content:space-between"><h2>'+(i+1)+'. '+w.name+'</h2>'+(d.warm[w.id]?'<span class="tag">きょう済み</span>':'')+'</div><p class="note">'+w.sub+'</p>';
-    h+='<dl class="kv"><dt>コツ</dt><dd>'+w.tip+'</dd><dt>確かめ</dt><dd>'+w.check+'</dd></dl>';
-    if(run&&W.phase==='run'){
-      h+='<div class="bar"><i id="bar"></i></div><div class="hear" id="hear">'+(w.mic?'声を待っています':'タイマーが進んでいます')+'</div><div class="row"><button class="btn line" data-act="warmStop">やめる</button></div>';
-    }else{
-      if(run&&W.phase==='done'&&W.msg) h+='<div class="why"><b>結果</b>'+W.msg+'</div>';
-      h+='<div class="row"><button class="btn" data-act="warmGo" data-v="'+i+'">'+(d.warm[w.id]?'もう一度':'はじめる')+'</button></div>';
-    }
-    h+='<details><summary>何のため・仕組み</summary><div><p><b>何のため：</b>'+w.why+'</p><p><b>仕組み：</b>'+w.how+'</p><p>'+tags(w.ev)+'</p></div></details></section>';
-  });
-  return h;
-}
-function warmGo(i){
-  stopAll(); var my=runId, w=WARM[i]; W={i:i,phase:'run'};
-  (w.mic? micOn() : Promise.resolve(false)).then(function(mic){
-    if(my!==runId) return; render();
-    return capture(w.ms,function(t,r){
-      var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,t/w.ms*100)+'%';
-      var hd=document.getElementById('hear'); if(hd&&mic){ var on=r.rms>0.004; hd.className='hear'+(on?' on':''); hd.textContent=on?(w.id==='siren'&&r.f?nname(f2m(r.f)):'聞こえています'):'声を待っています'; }
-    }).then(function(fr){
-      var msg='';
-      if(mic&&w.id==='breath'){
-        var a=fr.filter(function(x){return x.t>500&&x.rms>0.004;}).map(function(x){return x.rms;});
-        if(a.length<20) msg='息の音を拾えませんでした。マイクに少し近づけて、もう一度試します。';
-        else{ var mean=a.reduce(function(p,c){return p+c;},0)/a.length, sd=Math.sqrt(a.reduce(function(p,c){return p+(c-mean)*(c-mean);},0)/a.length), cv=sd/mean;
-          var secs=Math.round(a.length/fr.length*w.ms/1000);
-          msg='吐けた長さ：約'+secs+'秒。息の強さのゆれ：<b>'+(cv<0.25?'小さい':cv<0.5?'中くらい':'大きい')+'</b>。'+(cv<0.25?'安定しています。':'最初に出しすぎると後半で足りなくなります。出だしを細くします。')+'<span class="note">（ゆれの区切りは目安です）</span>'; }
-      }
-      if(mic&&w.id==='siren'){
-        var ms=fr.filter(function(x){return x.f>0;}).map(function(x){return f2m(x.f);});
-        if(ms.length<30) msg='声を拾えませんでした。ストローの先をマイクに向けて、もう一度試します。';
-        else{ var lo=Math.round(pct(ms,0.05)), hi=Math.round(pct(ms,0.95)); day().sirenHi=Math.max(day().sirenHi||0,hi);
-          msg='届いた範囲：<b>'+nname(lo)+' 〜 '+nname(hi)+'</b>。上の音は「記録」に残ります。日ごとに少しずつ上がれば、高い音の土台ができています。'; }
-      }
-      day().warm[w.id]=true; save(); W={i:i,phase:'done',msg:msg}; render();
-    });
-  });
-}
-
 /* ---------- 音程 ---------- */
 function vPitch(){
   var h=micNote();
@@ -402,7 +359,7 @@ function analyze(fr,notes,len){
     dev:slots.reduce(function(p,s){return p+Math.abs(s.sustain);},0)/slots.length,ok:heard&&slots.every(function(s){return Math.abs(s.sustain)<=OKC;})};
   var tip;
   if(res.ok&&Math.abs(res.onset)>OKC+10) tip='伸ばしている間は合っていますが、出だしが'+(res.onset<0?'低く':'高く')+'入っています。'+(res.onset<0?'下からずり上げて探している形です。':'')+'声を出す前に、頭の中でその音をはっきり鳴らしてから出します。出だしが合うと、一声目の印象が変わります。';
-  else if(res.ok&&res.wob>30) tip='高さは合っていますが、ぶれが大きめです。息の圧力が揺れています。準備の「息を一定に吐く」と同じ吐き方で伸ばします。';
+  else if(res.ok&&res.wob>30) tip='高さは合っていますが、ぶれが大きめです。息の圧力が揺れています。基礎の「息を一定に吐く」と同じ吐き方で伸ばします。';
   else if(res.ok) tip='合っています。同じ感覚でもう一度出せるか確かめます。';
   else if(res.sustain<0) tip='全体に低めです。息の支えが途中で抜けると低くなります。肋骨をしぼませずに、音の少し上に乗るつもりで出します。';
   else if(res.sustain>0) tip='全体に高めです。力で押すと高くなります。音量を少し下げて、軽く出します。';
@@ -538,27 +495,27 @@ var ISSUE={
  onset:{w:1,short:'出だし',title:'フレーズの出だしを、下からずり上げている',good:'フレーズの出だしから音が合っています',
   val:function(M){return '低く入った出だしの割合：'+Math.round(M.scoop*100)+'%';},
   why:'声を出してから音を探しています。一声目で上手く聞こえるかどうかは、ここで決まります。',
-  tip:'歌い出す前に、頭の中で最初の音をはっきり鳴らします。それから声を出します。わざとしゃくり上げる表現とは別に、まっすぐ入れるようにしておきます。',go:['warm','準備「出だしをそろえる」へ']},
+  tip:'歌い出す前に、頭の中で最初の音をはっきり鳴らします。それから声を出します。わざとしゃくり上げる表現とは別に、まっすぐ入れるようにしておきます。',go:['warm:onset','基礎「出だしをそろえる」へ']},
  wob:{w:1.1,short:'ぶれ',title:'伸ばす音がぶれる',good:'伸ばす音がまっすぐ安定しています',
   val:function(M){return '伸ばす音のぶれ：'+Math.round(M.wob)+'セント（20を超えると目立つ）';},
   why:'息の圧力が一定ではありません。声の高さは息の圧力で変わるので、息が揺れると音も揺れます。',
-  tip:'準備の「息を一定に吐く」と同じ吐き方で伸ばします。吸って広がった肋骨を、伸ばしている間しぼませません。',go:['warm','準備「息を一定に吐く」へ']},
+  tip:'基礎の「息を一定に吐く」と同じ吐き方で伸ばします。吸って広がった肋骨を、伸ばしている間しぼませません。',go:['warm:messa','基礎「メッサ・ディ・ヴォーチェ」へ']},
  drift:{w:1.1,short:'語尾',title:'伸ばす音の終わりで、音が下がる',good:'語尾まで音の高さを保てています',
   val:function(M){return '伸ばす音の始めと終わりの差：'+sgn(M.drift)+'セント';},
   why:'フレーズの終わりで息の支えが抜けています。',
-  tip:'語尾ほど、肋骨を広げたまま保ちます。最後の音を、少し先の壁まで届けるつもりで終えます。',go:['warm','準備「息を一定に吐く」へ']},
+  tip:'語尾ほど、肋骨を広げたまま保ちます。最後の音を、少し先の壁まで届けるつもりで終えます。',go:['warm:pulse','基礎「スッ・スッ・スー」へ']},
  high:{w:0.9,short:'高音',title:'高い音で、低くなる・不安定になる',good:'高い音でも音が崩れていません',
   val:function(M){return '高い音は、ほかの音より '+sgn(M.high.flat)+'セント、ずれの大きさは '+sgn(M.high.dev)+'セント';},
   why:'厚い地声のまま、力で押し上げています。押すほど声帯が固まり、届かなくなります。',
-  tip:'高い音ほど音量を下げて、軽く出します。「あ」は少し「お」寄りにします。準備の「ストローでサイレン」で、地声と裏声の行き来を毎日やります。',go:['warm','準備「ストローでサイレン」へ']},
+  tip:'高い音ほど音量を下げて、軽く出します。「あ」は少し「お」寄りにします。基礎の「ストローでサイレン」と「オクターブ・スライド」で、地声と裏声の行き来を毎日やります。',go:['warm:octslide','基礎「オクターブ・スライド」へ']},
  breathy:{w:1.1,short:'息もれ',title:'息もれが多く、声に芯がない',good:'息もれが少なく、声に芯があります',
   val:function(M){return '声に混ざる雑音の割合：'+(M.ap*100).toFixed(1)+'（6を超えると多い）';},
   why:'声帯の閉じが弱く、息が声に変わりきっていません。わざと息を混ぜる歌い方なら、問題ではありません。',
-  tip:'準備の「出だしをそろえる」で、息と声を同時に始めます。「ストローでサイレン」も、声帯が効率よく閉じる助けになります。',go:['warm','準備へ']},
+  tip:'基礎の「出だしをそろえる」で、息と声を同時に始めます。「グッ・グッ・グー」も、声帯が効率よく閉じる感覚を作ります。',go:['warm:gug','基礎「グッ・グッ・グー」へ']},
  dark:{w:0.8,short:'響き',title:'響きがこもっている',good:'響きに明るい成分があります',
   val:function(M){return '明るい成分の強さ：'+Math.round(M.spr)+'dB（0に近いほど明るい。マイクで変わります）';},
   why:'舌が奥に引っこむか、口の開きが小さく、高い成分が外に出ていません。',
-  tip:'舌の先を下の前歯の裏につけます。意地悪な子どもの「ネェ〜」の声を少し混ぜます。声を前歯の先から前に出すつもりで歌います。',go:['learn','「口の中」を読む']},
+  tip:'舌の先を下の前歯の裏につけます。意地悪な子どもの「ネェ〜」の声を少し混ぜます。声を前歯の先から前に出すつもりで歌います。',go:['warm:twang','基礎「トワング」へ']},
  dyn:{w:0.6,short:'強弱',title:'強弱の幅が小さい',good:'',
   val:function(M){return '声の大きさの幅：'+Math.round(M.dyn)+'dB';},
   why:'全部が同じ大きさだと、平らに聞こえます。',
@@ -682,7 +639,8 @@ function vRoad(){
   var goodDays={}; fs.forEach(function(f){ if(f.ok>=4) goodDays[f.d]=1; });
   var ST=[
    {t:'土台',s:'息、声帯の閉じ、音程、基本の響き',c:[
-     ['準備を3日以上やった（いま'+wd+'日）',wd>=3,'warm'],
+     ['基礎の練習を3日以上やった（いま'+wd+'日）',wd>=3,'warm'],
+     ['音の高さの聞き分けを測った',S.earTh!=null,'warm:earTest'],
      ['音程：段階3で、5回中4回以上合った',S.sets.some(function(x){return x.stage===3&&x.ok>=4;}),'pitch'],
      ['歌って分析を3回やった（いま'+S.takes.length+'回）',S.takes.length>=3,'sing'],
      ['仕組み：4つ以上を「知った」にした（いま'+doneCount()+'つ）',doneCount()>=4,'learn']]},
@@ -691,7 +649,7 @@ function vRoad(){
      ['それを、別の日にもう一度できた',Object.keys(goodDays).length>=2,'sing'],
      ['仕組み：「芯のある声」と「響き」を、日をあけて思い出せた',lv('core')>=2&&lv('res')>=2,'learn']]},
    {t:'高い音とつなぎ',s:'地声と裏声を混ぜる、音域を広げる',c:[
-     ['サイレンで届く上の音が、最初より半音3つ以上あがった',sir.length>=2&&Math.max.apply(null,sir)-sir[0]>=3,'warm'],
+     ['基礎の練習で届く上の音が、最初より半音3つ以上あがった',sir.length>=2&&Math.max.apply(null,sir)-sir[0]>=3,'warm'],
      ['歌って分析で、高音が「良い」になった（2回）',S.takes.filter(function(k){return k.sev&&k.sev.high!=null&&k.sev.high<=0.8;}).length>=2,'sing'],
      ['仕組み：「高い音の出し方」を、日をあけて思い出せた',lv('high')>=2,'learn']]},
    {t:'1曲を仕上げる',s:'曲を1つ決めて、フレーズごとに正確にする',soon:1},
@@ -792,6 +750,255 @@ function vFirst(){
   return h+'</section>';
 }
 
+/* ---------- 基礎トレーニング ----------
+   声の作られ方の順（体 → 息 → 声帯の閉じ → 喉をゆるめる発声 → 声区 → 響き → 言葉）に、耳・リズム・クールダウンを加えた10分類。
+   1つの練習は最大3段階。音階の練習は「一緒に歌う → 聞いてから歌う → 最初の音だけ聞いて歌う」と、お手本を減らしていく（ガイダンス仮説）。 */
+var CAT=[['body','体と姿勢'],['breath','息'],['close','声帯の閉じと出だし'],['sovt','喉をゆるめる発声'],['reg','地声・裏声・つなぎ'],['res','響きと母音'],['art','言葉'],['ear','耳と音程'],['rhy','リズム'],['cool','クールダウン']];
+var PATS={five:{n:[0,2,4,5,7,5,4,2,0],bpm:170},arp:{n:[0,4,7,12,7,4,0],bpm:140},tri:{n:[0,4,7,4,0],bpm:130},third:{n:[0,2,4,2,0],bpm:130},oct:{n:[0,12,0],bpm:55}};
+var MODE={with:'お手本と一緒に歌う',echo:'お手本を聞いてから、同じように歌う',first:'最初の音だけ聞いて、頭の中で続きを鳴らしながら歌う'};
+var E_EST=['','研究で確かめられている'], E_MID=['mid','指導法として広く使われている'], E_WEAK=['weak','研究は少ない'];
+function SC(p,v,mode,o){o=o||{};o.p=p;o.v=v;o.mode=mode;return {sc:o};}
+var DR=[
+ {id:'posture',c:'body',n:'姿勢のリセット',src:'アレクサンダー・テクニック',ev:[E_MID],why:'頭と首の位置が崩れると、喉のまわりに余計な力が入ります。',
+  lv:[{t:'壁を背にして、かかと・お尻・肩甲骨・後頭部を軽くつけます。そのまま壁から離れ、同じ形で楽に立ちます。頭のてっぺんを、上から糸で吊られているつもりで。',ms:30000}],chk:['あごが前に出ていない','肩が上がっていない']},
+ {id:'release',c:'body',n:'首・肩・あごをほぐす',src:'喉のまわりの筋肉をほぐす手技（Roy ら）を簡単にしたもの',ev:[E_MID,['weak','歌での研究は少ない']],why:'あごと首の力みは、喉を締める原因になります。',
+  lv:[{t:'肩を上げてストンと落とす（3回）。首をゆっくり左右に倒す（各5秒）。両手のひらを頬に当て、あごの力を抜いて、手の重さで口を下に開く（5回）。',ms:60000}],chk:['あごを開けたとき、カクッとならない','首と肩が軽くなった']},
+ {id:'tongue',c:'body',n:'舌をほぐす',src:'発声前の準備として一般的',ev:[E_WEAK],why:'舌の付け根が固いと、声がこもり、喉も締まります。',
+  lv:[{t:'舌を思いきり前に出して5秒、左右の口角へ各5秒。そのあと、舌先で歯の外側をなぞるように大きく回します（左右5回ずつ）。',ms:45000}],chk:['舌の付け根の力が抜けた']},
+ {id:'inhale',c:'breath',n:'静かに吸う',src:'アッポッジョ（Richard Miller）',ev:[E_MID],why:'肩で吸うと首に力が入ります。吸い方で、歌っている間の息の安定が決まります。',
+  lv:[{t:'両手を脇腹（いちばん下の肋骨）に当て、鼻から4秒で静かに吸います。手が横に押し広げられるのを感じます。口から8秒で吐きます。5回。',ms:60000},
+      {t:'口から1秒で、音を立てずに吸います（歌の途中の息つぎ）。それでも脇腹が横に広がるようにします。8回。',ms:40000}],chk:['肩が上がらない','吸う音がしない','脇腹が横に広がる']},
+ {id:'breath',c:'breath',n:'息を一定に吐く',src:'アッポッジョ',ev:[['','仕組みは確立された知識'],E_MID],why:'声の高さと大きさは息の圧力で決まります。圧力が揺れると、音程も声も揺れます。',cue:'遠くのろうそくの火を、消さずに揺らし続けるつもりで。',met:'cv',
+  lv:[{t:'「スー」と細く、一定の強さで10秒吐きます。',ms:10000,goal:30},{t:'同じように15秒。',ms:15000,goal:25},{t:'同じように20秒。',ms:20000,goal:20}],chk:['最後まで同じ強さで吐けた','肋骨がすぐにしぼまない']},
+ {id:'pulse',c:'breath',n:'スッ・スッ・スー',src:'アッポッジョ（Lamperti、Miller）',ev:[E_MID],why:'息を押し出す筋肉と、保つ筋肉の両方を目覚めさせます。語尾で音が下がる人に効きます。',
+  lv:[{t:'「スッ・スッ・スー」を8回。「スッ」のたびに、お腹まわりが外へ張るのを感じます。',ms:40000},{t:'拍に合わせて「スッ」を8回、そのまま「スー」を8拍。長い「スー」の最後まで張りを保ちます。3回。',ms:36000,click:80}],chk:['「スッ」のたびにお腹まわりが外へ張る','長い「スー」の最後まで張りが残る']},
+ {id:'swell',c:'breath',n:'息のクレッシェンド',src:'ベルカント唱法（メッサ・ディ・ヴォーチェの準備）',ev:[E_MID],why:'息の量を、なめらかに変えられるようにします。強弱の表現の土台です。',
+  lv:[{t:'「スー」を小さく始めて4秒で大きくし、4秒で小さく戻します。4回。',ms:36000}],chk:['途中で急に強くならない','小さく戻すときに息が止まらない']},
+ {id:'onset',c:'close',n:'出だしをそろえる',src:'Richard Miller の出だしの練習',ev:[['','仕組みは確立された知識'],E_MID],why:'一声目の印象を作ります。息と声帯の閉じが同時に始まると、息もれも詰まりもない出だしになります。',cue:'机の上に、指でそっと点を置くつもりで。',
+  lv:[{t:'小さな声で短く「あ」を続けます。息が先に出る「は」にも、喉を詰めた「っあ」にもしません。',ms:30000},{t:'「あ」を、低い・真ん中・高いの3つの高さで5回ずつ。',ms:40000}],chk:['出だしに息の音がない','喉の詰まる音がない']},
+ {id:'three',c:'close',n:'3つの出だしを比べる',src:'Richard Miller',ev:[E_MID],why:'悪い出だしを自分で出せると、良い出だしとの違いが分かり、直せるようになります。',
+  lv:[{t:'息が先に出る「はあ」、喉を詰めた「っあ」、同時に始まる「あ」を順に出して、違いを聞き分けます。そのあと3つ目だけを5回続けます。',ms:45000}],chk:['3つの違いを聞き分けられた','3つ目だけを5回続けて出せた']},
+ {id:'gug',c:'close',n:'グッ・グッ・グー',src:'Speech Level Singing（Seth Riggs）',ev:[E_MID],why:'「グ」で声帯がしっかり閉じます。息もれした声に芯を作ります。',
+  lv:[SC('tri','グッ・グッ・グー','with'),SC('tri','グッ・グッ・グー','echo'),SC('arp','グッ・グッ・グー','first')],chk:['「グ」で喉が詰まりすぎない','伸ばす音に芯がある']},
+ {id:'flow',c:'close',n:'息もれを減らしていく',src:'フロー発声（Sundberg）',ev:[E_EST],why:'息が多すぎる声と、締めすぎた声の間に、いちばん効率のよい閉じ方があります。',met:'ap',
+  lv:[{t:'ため息のような「はぁー」から始めて、5秒かけて息の音を減らし、芯のある「あー」に変えます。',ms:6000},{t:'最初から芯のある「あー」を8秒。息の音を入れず、喉も締めません。',ms:8000,goal:6}],chk:['喉を締めずに芯が出た']},
+ {id:'hum',c:'close',n:'ハミングを伸ばす',src:'共鳴の基本練習',ev:[E_MID],why:'口を閉じると喉の負担が小さく、声帯のちょうどよい閉じ方を覚えやすくなります。',met:'wob',
+  lv:[{t:'口を閉じて「んー」を8秒。唇と鼻のあたりが震えるのを確かめます。',ms:8000,goal:20},SC('third','んー','echo')],chk:['唇か鼻のあたりが震える','力まずに伸ばせる']},
+ {id:'siren',c:'sovt',n:'ストローでサイレン',src:'半閉鎖声道エクササイズ（Titze）',ev:[E_EST],why:'口先を細くすると、声帯が少ない力で振動します。喉に負担をかけずに、地声と裏声の行き来を練習できます。',met:'hi',
+  lv:[{t:'ストローをくわえて「うー」と、救急車のサイレンのように低い音から高い音へ行き来します。高いところほど小さく軽く。途中で裏返ってかまいません。ストローがなければ、唇を震わせる「ブルル」でも代わりになります。',ms:60000},
+      {t:'コーヒー用などの細いストローで同じことをします。細いほど喉の負担は減り、息のコントロールは難しくなります。',ms:60000},SC('oct','ストローで「うー」','with',{top:2})],chk:['喉が痛くない','終わった後に声が軽い']},
+ {id:'water',c:'sovt',n:'水の中にストロー',src:'Lax Vox（Sihvo）／Titze',ev:[['','研究で効果が確かめられつつある']],why:'水の抵抗で、声帯の負担をさらに減らします。泡の出方で、息が一定かどうかが目で分かります。',
+  lv:[{t:'コップに水を5cmほど入れ、ストローの先を2〜3cm沈めます。泡が一定に出るように「うー」と声を出し、高い音へ、低い音へ動かします。',ms:60000}],chk:['泡が一定に出続けた','喉が楽']},
+ {id:'lip',c:'sovt',n:'リップロール',src:'半閉鎖声道エクササイズ',ev:[E_EST],why:'唇を震わせ続けるには、息が一定でなければなりません。喉の負担を減らしながら、音階で音域を通します。',
+  lv:[SC('five','唇をブルブル震わせて','with'),SC('arp','唇をブルブル震わせて','with',{top:1}),SC('arp','唇をブルブル震わせて','echo',{top:1})],chk:['唇の震えが途中で止まらない','高いところで力まない']},
+ {id:'falsetto',c:'reg',n:'裏声を鍛える',src:'Estill Voice Training（薄い声帯）／ベルカントの上から下ろす練習',ev:[E_MID],why:'弱い裏声は地声とつながりません。高い音を楽に出す土台です。',
+  lv:[SC('five','裏声で「ふー」','with',{hi:1}),SC('five','裏声で「ふー」','echo',{hi:1}),SC('arp','裏声で「うー」','echo',{hi:1})],chk:['裏声がかすれず、はっきり出る','下がっていっても地声に落ちない']},
+ {id:'yodel',c:'reg',n:'地声と裏声の切り替え',src:'Estill Voice Training／ヨーデル',ev:[E_MID],why:'声がひっくり返る場所を知り、わざと起こせるようになると、逆に起こさずに通れるようになります。',
+  lv:[{t:'低い地声の「おー」から、わざと裏声へひっくり返り、また地声に戻ります。ひっくり返る場所を、毎回同じ高さで起こせるようにします。10回。',ms:40000}],chk:['ひっくり返る場所が分かった','わざと起こせた']},
+ {id:'octslide',c:'reg',n:'オクターブ・スライド',src:'Speech Level Singing／ベルカント',ev:[E_MID],why:'1オクターブをなめらかに上下して、地声と裏声のつなぎ目を、段差なく通る練習です。',cue:'上の音は、少し先の壁まで軽く投げるつもりで。',
+  lv:[SC('oct','「うー」でなめらかに','with'),SC('oct','「うー」でなめらかに','echo'),SC('oct','「あー」でなめらかに','echo',{top:2})],chk:['裏返らずに上まで行けた','上で音量を下げられた']},
+ {id:'nay',c:'reg',n:'ネイ・ネイ',src:'Speech Level Singing（Seth Riggs）',ev:[E_MID],why:'意地悪な声の「ネイ」は、喉の位置を楽なまま高い音へ連れていきます。',
+  lv:[SC('arp','意地悪な声で「ネイ」','with',{top:1}),SC('arp','意地悪な声で「ネイ」','echo',{top:2}),SC('arp','「マム」（ネイと同じ楽さで）','first',{top:2})],chk:['上のドで喉が締まらない','話し声くらいの音量で出せた']},
+ {id:'messa',c:'reg',n:'メッサ・ディ・ヴォーチェ',src:'ベルカント唱法',ev:[E_MID],why:'1音の中で強弱をつけても、高さと声区が変わらないようにします。音のぶれを止め、表現の幅を作ります。',met:'wob',
+  lv:[{t:'出しやすい1音を、小さく始めて4秒で大きくし、4秒で小さく戻します。音の高さを変えません。',ms:8000,goal:25},{t:'少し高めの音で同じことをします。',ms:8000,goal:20}],chk:['大きくしても音が上がらない','小さくしても裏返らない']},
+ {id:'humopen',c:'res',n:'ハミングから開く',src:'共鳴の基本練習',ev:[E_MID],why:'口を閉じたときの前の響きを、口を開けても保つ練習です。',
+  lv:[SC('tri','「んー」から「あー」に開く','with'),SC('tri','「んー」から「あー」に開く','echo')],chk:['開いても響きの位置が変わらない']},
+ {id:'twang',c:'res',n:'トワング',src:'Estill Voice Training／Complete Vocal Technique',ev:[['','仕組みは確立された知識'],E_MID],why:'喉の奥の上を少し狭めると、2〜4kHzの明るい成分が強くなり、小さな力で声が通ります。',met:'spr',
+  lv:[{t:'猫の「ニャー」や、意地悪な子どもの「ネェ〜」を5秒伸ばします。明るく、少しきつい声になればできています。',ms:5000},SC('five','「ニャー」','echo')],chk:['明るく通る声になった','喉は痛くない']},
+ {id:'vowels',c:'res',n:'5つの母音をそろえる',src:'ベルカント唱法',ev:[E_MID],why:'母音が変わるたびに響きが変わると、歌がでこぼこに聞こえます。',
+  lv:[{t:'同じ高さで「あ・え・い・お・う」を、つなげて伸ばします。母音が変わっても、明るさと響きの場所を変えません。5回。',ms:30000},SC('five','1音ずつ「あ・え・い・お・う・お・い・え・あ」','echo')],chk:['「い」と「う」でこもらない','あごが大きく動かない']},
+ {id:'jaw',c:'res',n:'舌とあごを切り離す',src:'発声指導で一般的な練習',ev:[E_WEAK],why:'あごで言葉を作ると、喉に力が入り、響きも揺れます。',
+  lv:[{t:'鏡を見て、あごを少し開けたまま動かさずに「ラ・ラ・ラ」と言います。動くのは舌だけです。次に「ヤ・ヤ・ヤ」。',ms:30000}],chk:['あごが動かない']},
+ {id:'ptk',c:'art',n:'パ・タ・カ',src:'言語聴覚の分野で使われる、口の動きの速さの練習',ev:[E_WEAK],why:'子音がはっきりすると、歌詞が伝わり、リズムもそろって聞こえます。',
+  lv:[{t:'「パタカ・パタカ」を、はっきり、だんだん速く10秒。次に、歌いたい曲の歌詞1行を、子音を立てて読みます。',ms:30000}],chk:['速くしても音がつぶれない']},
+ {id:'vocalise',c:'art',n:'母音だけで歌う',src:'ヴォカリーズ（ベルカント唱法）',ev:[E_MID],why:'子音で息と声が途切れると、フレーズがなめらかにつながりません。母音の線を先に作ります。',
+  lv:[{t:'歌いたい曲の1フレーズを、子音を抜いて母音だけで歌います（「きみのこえ」→「いおおえ」）。なめらかにつながったら、子音を戻して同じなめらかさで歌います。',ms:45000}],chk:['母音だけのとき、音がなめらかにつながる','子音を戻しても同じなめらかさ']},
+ {id:'earTest',c:'ear',n:'音の高さを聞き分ける',src:'心理物理学の上下法',ev:[E_EST],why:'聞き分けられる差を測ります。ここが十分小さければ、音程のずれの原因は耳ではなく、声への変え方にあると分かります。',ear:1,lv:[{t:'2つの音が鳴ります。2つ目が1つ目より高いか低いかを答えます。正解が続くと差が小さくなり、間違えると大きくなります。'}],chk:[]},
+ {id:'audiate',c:'ear',n:'頭の中で鳴らしてから歌う',src:'Gordon のオーディエーション',ev:[E_MID],why:'歌う前に音を頭の中ではっきり鳴らせると、最初から合った高さで出せます。',
+  lv:[SC('third','「あー」','echo'),SC('five','「あー」','echo'),SC('arp','「あー」','first')],chk:['歌う前に頭の中で鳴らせた']},
+ {id:'solfa',c:'ear',n:'ドレミで歌う',src:'コダーイ・メソッド（手で高さを示す）',ev:[E_MID],why:'音の名前と手の高さで、音と音の距離を体で覚えます。',
+  lv:[SC('five','「ド・レ・ミ・ファ・ソ」（手で高さを示す）','with'),SC('five','「ド・レ・ミ・ファ・ソ」（手で高さを示す）','echo'),SC('arp','「ド・ミ・ソ・ド」（手で高さを示す）','first')],chk:['手の高さと声の高さがそろった']},
+ {id:'beatTa',c:'rhy',n:'拍に合わせて「タ」',src:'ダルクローズのリトミック',ev:[E_MID],why:'拍を体で感じて、言葉の頭をそろえます。最初は目で拍を見せ、だんだん外します。',
+  lv:[{t:'4拍のカウントの後、画面の丸に合わせて「タ」と短く16回歌います。',beat:{bpm:80,n:16,vis:1},goal:45},{t:'4拍のカウントの後、丸は出ません。頭の中で拍を続けて「タ」を16回。',beat:{bpm:80,n:16,vis:0},goal:45},{t:'4拍のカウントの後、拍と拍のちょうど間（裏拍）で「タ」を16回。丸は出ません。',beat:{bpm:90,n:16,vis:0,off:1},goal:50}],chk:[]},
+ {id:'stepRead',c:'rhy',n:'足で拍を踏んでリズム読み',src:'ダルクローズのリトミック／コダーイ・メソッド',ev:[E_MID],why:'メロディーより先に、言葉のリズムを体に入れます。',
+  lv:[{t:'足で拍を踏みながら、歌いたい曲の歌詞をメロディーなしで、リズムどおりに読みます。そろったら、足を踏んだままメロディーを付けます。',ms:60000,click:90}],chk:['足の拍が最後まで崩れない','言葉の頭が拍にそろう']},
+ {id:'cooldown',c:'cool',n:'クールダウン',src:'歌手の声の休め方（Gish らの調査）',ev:[['weak','効果の研究は少ない']],why:'高い音や強い声の後に、低く軽い声で喉を落ち着かせます。',
+  lv:[{t:'ストローで、高い音から低い音へゆっくり下がる「うー」を5回。そのあと、ため息のように低く軽い「はぁー」を3回。最後に水を飲みます。',ms:60000}],chk:['喉が軽く、熱っぽさがない']}
+];
+var DRI={}; DR.forEach(function(d){DRI[d.id]=d;});
+var D=null;
+function drec(id){ if(!S.drills) S.drills={}; return S.drills[id]||(S.drills[id]={lv:1,log:[]}); }
+function lastDone(id){ var r=(S.drills||{})[id]; return r&&r.log.length? r.log[r.log.length-1].d : ''; }
+function rng(){ return S.range||{lo:48,hi:67}; }
+function scReps(sc){
+  var P=PATS[sc.p], span=Math.max.apply(null,P.n), r=rng(), lim=r.hi+(sc.top||0), roots=[], m;
+  if(sc.hi){ for(m=lim-span;m>=Math.max(r.lo,lim-span-6);m--) roots.push(m); }
+  else{ for(m=r.lo+1;m+span<=lim&&roots.length<7;m++) roots.push(m); var dn=roots.slice(0,-1).reverse(); roots=roots.concat(dn.slice(0,4)); }
+  if(!roots.length) roots=[r.lo];
+  return roots;
+}
+function estMs(d,lvi){ var L=d.lv[lvi]; if(d.ear) return 120000; if(L.beat) return (L.beat.n+4)*60000/L.beat.bpm+3000; if(L.sc){ var P=PATS[L.sc.p], nd=60000/P.bpm, per=P.n.length*nd*(L.sc.mode==='with'?1:2)+900; return scReps(L.sc).length*per; } return L.ms||30000; }
+function fmtMin(ms){ var m=Math.round(ms/60000*2)/2; return m<1?'1分以内':'約'+m+'分'; }
+/* きょうのメニュー：体 → 息 → 喉をゆるめる → 閉じ → 声区 → 響き → 耳 → クールダウン。軽いものから重いものへ、最後に下ろす */
+function weakCats(){ var k=S.takes[S.takes.length-1], map={breathy:'close',onset:'close',wob:'breath',drift:'breath',high:'reg',dark:'res',pitch:'ear',rhythm:'rhy',dyn:'breath'}, out=[]; if(k) k.top.forEach(function(i){ if(map[i]&&out.indexOf(map[i])<0) out.push(map[i]); }); return out; }
+function pick(cat,skip){ var c=DR.filter(function(d){return d.c===cat&&skip.indexOf(d.id)<0&&!(d.id==='earTest'&&lastDone('earTest')&&lastDone('earTest')>addDays(-7));}); c.sort(function(a,b){return lastDone(a.id)<lastDone(b.id)?-1:lastDone(a.id)>lastDone(b.id)?1:0;}); return c[0]?c[0].id:null; }
+function menu(){
+  var d=day(); if(d.menu&&d.menuFor===(d.throat||'')) return d.menu;
+  var m=[];
+  if(d.throat==='bad') m=['release','siren','cooldown'];
+  else{
+    var wk=weakCats();
+    ['body','breath','sovt','close','reg','res','ear','cool'].forEach(function(c){ var id=pick(c,m); if(id) m.push(id); if(wk.indexOf(c)>=0){ var id2=pick(c,m); if(id2) m.push(id2); } });
+    if(wk.indexOf('rhy')>=0){ var r=pick('rhy',m); if(r) m.splice(m.length-1,0,r); }
+  }
+  d.menu=m; d.menuFor=d.throat||''; save(); return m;
+}
+function vBase(){
+  if(D) return vDrill();
+  var m=menu(), d=day(), done=d.menuDone||{}, n=m.filter(function(id){return done[id];}).length, wk=weakCats(), tot=0;
+  m.forEach(function(id){tot+=estMs(DRI[id],Math.min(drec(id).lv,DRI[id].lv.length)-1);});
+  var h=micNote()+'<section class="sheet"><div class="row" style="justify-content:space-between"><h2>きょうのメニュー</h2><span class="code">'+n+' / '+m.length+' ・ '+fmtMin(tot)+'</span></div>';
+  if(d.throat==='bad') h+='<p class="note">喉の調子が悪い日なので、軽い3つだけにしています。</p>';
+  else h+='<p class="note">体をほぐす → 息 → 喉をゆるめる → 声帯の閉じ → 地声と裏声 → 響き → 耳 → クールダウン、の順です。軽いものから始めて、最後に喉を落ち着かせます。'+(wk.length?'前回の分析で出たところ（'+wk.map(function(c){return CAT.filter(function(x){return x[0]===c;})[0][1];}).join('・')+'）を多めにしています。':'')+'</p>';
+  h+='<div class="steps">'+m.map(function(id,i){var x=DRI[id],r=drec(id);return '<div class="step"><span class="n">'+(i+1)+'</span><div class="t"><b>'+x.n+'</b><small>'+CAT.filter(function(c){return c[0]===x.c;})[0][1]+' ・ 段階'+Math.min(r.lv,x.lv.length)+'/'+x.lv.length+'</small></div>'+(done[id]?'<span class="done">済</span>':'')+'<button class="btn '+(done[id]?'line':'sub')+'" data-act="dOpen" data-v="'+id+'" data-m="1">'+(done[id]?'もう一度':'やる')+'</button></div>';}).join('')+'</div>';
+  var nx=m.filter(function(id){return !done[id];})[0];
+  if(nx) h+='<div class="row"><button class="btn big" data-act="dOpen" data-v="'+nx+'" data-m="1">'+(n?'続きから':'はじめから')+'</button></div>'; else h+='<p class="c-ok"><b>きょうのメニューは全部終わりました。</b></p>';
+  h+='</section><section class="sheet"><h2>練習の一覧</h2><p class="note">'+DR.length+'種類。それぞれ最大3段階で、同じ段階を別の日に2回できると、次の段階が開きます。</p>';
+  CAT.forEach(function(c){ var ds=DR.filter(function(x){return x.c===c[0];});
+    h+='<details><summary>'+c[1]+'（'+ds.length+'）</summary><div class="steps">'+ds.map(function(x){var r=drec(x.id);return '<div class="step"><div class="t"><b>'+x.n+'</b><small>'+x.src+'</small></div><span class="tag '+(r.log.length?'mid':'weak')+'">段階'+Math.min(r.lv,x.lv.length)+'/'+x.lv.length+'</span><button class="btn line" data-act="dOpen" data-v="'+x.id+'">開く</button></div>';}).join('')+'</div></details>'; });
+  return h+'</section>';
+}
+function vDrill(){
+  var x=DRI[D.id], r=drec(D.id), L=x.lv[D.lv-1], h='<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">'+CAT.filter(function(c){return c[0]===x.c;})[0][1]+(D.menu?' ・ メニュー '+(menu().indexOf(D.id)+1)+' / '+menu().length:'')+'</span><button class="btn line" style="padding:4px 10px" data-act="dQuit">一覧へ</button></div><h2>'+x.n+'</h2>';
+  if(D.phase==='intro'){
+    if(x.lv.length>1) h+='<div class="row">'+x.lv.map(function(_,i){var op=i+1<=r.lv;return '<button class="btn line'+(D.lv===i+1?' on':'')+'" '+(op?'data-act="dLv" data-v="'+(i+1)+'"':'disabled style="opacity:.45"')+'>段階'+(i+1)+(op?'':'（未）')+'</button>';}).join('')+'</div>';
+    h+='<p><b>'+(L.sc?MODE[L.sc.mode]+'。'+L.sc.v+'で歌います。':L.t)+'</b></p>';
+    if(L.sc) h+='<p class="note">お手本の音階が、半音ずつ上がっていきます（'+scReps(L.sc).length+'回）。'+(S.range?'':'音域を測っていないので、中くらいの声の高さで鳴らします。「音程」のタブで測ると、自分の声に合わせます。')+'</p>'+
+      (L.sc.mode==='with'?'<p class="note">イヤホンで聞くと、一緒に歌いながら判定もできます。スピーカーだと、マイクがお手本の音を拾うので判定しません。</p><div class="row"><button class="btn line'+(S.phones?' on':'')+'" data-act="phones">イヤホンを使っている</button></div>':'');
+    if(x.cue) h+='<p class="note">イメージ：'+x.cue+'</p>';
+    h+='<dl class="kv"><dt>何のため</dt><dd>'+x.why+'</dd><dt>出どころ</dt><dd>'+x.src+'　'+tags(x.ev)+'</dd>'+(x.chk.length?'<dt>確かめ</dt><dd>'+x.chk.join('／')+'</dd>':'')+(L.goal&&x.met?'<dt>目安</dt><dd>'+MET[x.met].name+'が '+L.goal+(x.met==='ap'?'':x.met==='cv'?'%':'セント')+' 以下</dd>':'')+'</dl>';
+    h+='<div class="row"><button class="btn big" data-act="dGo">はじめる（'+fmtMin(estMs(x,D.lv-1))+'）</button></div>';
+  }
+  if(D.phase==='run'){
+    if(x.ear) h+=vEar();
+    else{
+      h+='<div class="bar"><i id="bar"></i></div>';
+      if(L.sc) h+='<div class="phase" id="dph">聞く</div><div class="phase c-ok" id="dnote" style="font:600 var(--t-xl) var(--f-code)">—</div><p class="note" style="text-align:center" id="drep"></p>';
+      else if(L.beat) h+='<div class="phase" id="dph">カウント</div>'+(L.beat.vis?'<div class="beat" id="beat"></div>':'');
+      else h+='<p>'+L.t+'</p>';
+      h+='<div class="hear" id="hear"></div><div class="row"><button class="btn line" data-act="dStop">止める</button></div>';
+    }
+  }
+  if(D.phase==='done'){
+    if(D.msg) h+='<div class="why"><b>結果</b>'+D.msg+'</div>';
+    if(x.chk.length){ h+='<h3>自分で確かめる</h3><div class="steps">'+x.chk.map(function(c,i){var v=D.ck[i];return '<div class="step"><div class="t">'+c+'</div><button class="btn line'+(v===1?' on':'')+'" data-act="dCk" data-v="'+i+'" data-y="1">できた</button><button class="btn line'+(v===0?' on':'')+'" data-act="dCk" data-v="'+i+'" data-y="0">まだ</button></div>';}).join('')+'</div>'; }
+    h+='<div class="row"><button class="btn big" data-act="dSave">記録する'+(D.menu?'して次へ':'')+'</button><button class="btn line" data-act="dGo">もう一度</button></div>';
+  }
+  if(D.phase==='saved'){
+    h+='<p>'+(D.up?'<b class="c-ok">段階'+D.up+'が開きました。</b>次からはこの段階で練習します。':'記録しました。')+'</p>';
+    var nx=D.menu?menu().filter(function(id){return !(day().menuDone||{})[id];})[0]:null;
+    h+='<div class="row">'+(nx?'<button class="btn big" data-act="dOpen" data-v="'+nx+'" data-m="1">次：'+DRI[nx].n+'</button>':'')+'<button class="btn line" data-act="dQuit">一覧へ</button></div>';
+  }
+  return h+'</section>';
+}
+function setHear(r){ var hd=document.getElementById('hear'); if(hd){var on=r.rms>0.006;hd.className='hear'+(on?' on':'');hd.textContent=on?(r.f?'聞こえています（'+nname(f2m(r.f))+'）':'聞こえています'):'';} }
+function setBar(p){ var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,p*100)+'%'; }
+function setTxt(id,t){ var e=document.getElementById(id); if(e) e.textContent=t; }
+function dGo(){
+  stopAll(); var my=runId, x=DRI[D.id], L=x.lv[D.lv-1];
+  D.phase='run'; D.msg=''; D.ck={}; D.val=null; D.goalOk=null;
+  if(x.ear){ D.E={d:100,streak:0,rev:[],last:0,n:0}; render(); earNext(); return; }
+  ensureAC();
+  (x.met||L.sc||L.beat? micOn() : Promise.resolve(false)).then(function(mic){
+    if(my!==runId) return; render();
+    if(L.sc) return runScale(L.sc,mic,my);
+    if(L.beat) return runBeat(L,mic,my);
+    return runTimed(x,L,mic,my);
+  });
+}
+function finishDrill(msg){ D.phase='done'; D.msg=msg||''; day().warm=day().warm||{}; day().warm[D.id]=true; save(); render(); }
+function runTimed(x,L,mic,my){
+  if(L.click){ var b=60000/L.click; for(var t=0;t<L.ms;t+=b) tone(96,60,t); }
+  if(mic&&x.met) capFull=true;
+  capture(L.ms,function(t,r){ setBar(t/L.ms); if(mic) setHear(r); }).then(function(fr){
+    capFull=false; if(my!==runId) return;
+    var msg='';
+    if(mic&&x.met){ var v=MET[x.met].f(fr);
+      if(v==null) msg='声を拾えませんでした。マイクに近づいて、もう一度試せます。';
+      else{ D.val=v; msg=MET[x.met].name+'：<b>'+MET[x.met].fmt(v)+'</b>';
+        if(x.met==='hi'){ day().sirenHi=Math.max(day().sirenHi||0,Math.round(v)); msg+='。日ごとに少しずつ上がれば、高い音の土台ができています。'; }
+        if(L.goal){ D.goalOk=v<=L.goal; msg+=D.goalOk?'。目安を満たしました。':'。目安（'+L.goal+'）まで、もう少しです。'; } } }
+    finishDrill(msg);
+  });
+}
+function runScale(sc,mic,my){
+  var P=PATS[sc.p], nd=60000/P.bpm, roots=scReps(sc), measure=mic&&(sc.mode!=='with'||S.phones), hits=0, tot=0, hiMax=0, i=0;
+  (function rep(){
+    if(my!==runId) return;
+    if(i>=roots.length){
+      var msg=measure&&tot>20?'お手本の音に合っていた割合：<b>'+Math.round(hits/tot*100)+'%</b>（±50セント以内）。届いたいちばん上の音：'+nname(hiMax)+'。':(mic?'':'マイクが使えないので、判定はしていません。');
+      if(measure&&tot>20){ D.val=hits/tot*100; D.goalOk=D.val>=(sc.mode==='first'?50:60); msg+=D.goalOk?'目安を満たしました。':'目安は'+(sc.mode==='first'?50:60)+'%です。'; day().sirenHi=Math.max(day().sirenHi||0,Math.round(hiMax)); }
+      else if(mic&&sc.mode==='with'&&!S.phones) msg='スピーカーで鳴らしたので、判定はしていません。イヤホンを使うか、段階2（聞いてから歌う）で判定できます。';
+      finishDrill(msg); return;
+    }
+    var root=roots[i], ns=P.n.map(function(o){return root+o;}), len=ns.length*nd, lead=0;
+    setTxt('drep',(i+1)+' / '+roots.length+'　'+nname(root)+' から');
+    if(sc.mode==='first'){ tone(root,700); lead=1000; }
+    else{ ns.forEach(function(m,j){tone(m,nd-30,j*nd);}); if(sc.mode==='echo') lead=len+350; }
+    setTxt('dph',sc.mode==='with'?'一緒に歌う':'聞く');
+    var t0=performance.now();
+    (function hl(){ if(my!==runId) return; var t=performance.now()-t0; if(t<lead||sc.mode==='with'){ var j=Math.floor((sc.mode==='with'?t:t)/nd); if(sc.mode!=='first'&&j<ns.length) setTxt('dnote',nname(ns[j])); } if(t<lead) requestAnimationFrame(hl); })();
+    sleep(sc.mode==='with'?0:lead).then(function(){
+      if(my!==runId) return;
+      if(sc.mode!=='with') setTxt('dph','歌う');
+      capture(len,function(t,r){ setBar((i+t/len)/roots.length); if(mic) setHear(r); var j=Math.min(ns.length-1,Math.floor(t/nd)); if(sc.mode!=='with') setTxt('dnote',sc.mode==='first'&&j>0?'♪':nname(ns[j])); }).then(function(fr){
+        if(measure) fr.forEach(function(p){ if(!p.f) return; var j=Math.floor(p.t/nd); if(j>=ns.length||p.t-j*nd<nd*0.3) return; var c=(f2m(p.f)-ns[j])*100; c-=Math.round(c/1200)*1200; tot++; if(Math.abs(c)<=50) hits++; hiMax=Math.max(hiMax,f2m(p.f)); });
+        i++; sleep(700).then(rep);
+      });
+    });
+  })();
+}
+function runBeat(L,mic,my){
+  var B=L.beat, b=60000/B.bpm, k;
+  for(k=0;k<4;k++) tone(k===0?96:91,70,k*b);
+  var t0=performance.now();
+  (function cnt(){ if(my!==runId||D.phase!=='run') return; var t=performance.now()-t0; if(t<4*b){ setTxt('dph','カウント '+(Math.floor(t/b)+1)); requestAnimationFrame(cnt); } })();
+  sleep(4*b).then(function(){
+    if(my!==runId) return; setTxt('dph',B.off?'裏拍で「タ」':'「タ」');
+    capture(B.n*b+300,function(t,r){ setBar(t/(B.n*b)); var bd=document.getElementById('beat'); if(bd) bd.className='beat'+((t%b)<b*0.18?' on':''); if(mic) setHear(r); }).then(function(fr){
+      if(my!==runId) return;
+      if(!mic){ finishDrill('マイクが使えないので、判定はしていません。'); return; }
+      var ons=[], quiet=99, i;
+      for(i=0;i<fr.length;i++){ var on=fr[i].rms>0.02; if(on&&quiet>=4) ons.push(fr[i].t); quiet=on?0:quiet+1; }
+      var tg=function(t){ var x=(t-(B.off?b/2:0))/b; return Math.round(x)*b+(B.off?b/2:0); };
+      var dv=ons.filter(function(t){return t<B.n*b-b*0.3+(B.off?b/2:0);}).map(function(t){return t-tg(t);}).filter(function(d){return Math.abs(d)<b*0.45;});
+      if(dv.length<8){ finishDrill('「タ」を拾えませんでした（'+dv.length+'回）。はっきり短く歌います。'); return; }
+      var md=median(dv), sp=dv.reduce(function(p,d){return p+Math.abs(d-md);},0)/dv.length, h=dv.length>>1;
+      var drift=median(dv.slice(h))-median(dv.slice(0,h));
+      D.val=sp; D.goalOk=sp<=L.goal;
+      finishDrill('拾えた回数：'+dv.length+' / '+B.n+'。拍からのばらつき：<b>'+Math.round(sp)+'ミリ秒</b>（目安 '+L.goal+' 以下）。全体には'+(Math.abs(md)<25?'ほぼ拍どおり':Math.round(Math.abs(md))+'ミリ秒'+(md<0?'早め':'遅め'))+'。'+(Math.abs(drift)>30?'後半ほど'+(drift<0?'走って':'もたって')+'います。':'')+'<br><span class="note">ブルートゥースのイヤホンでは音が遅れて聞こえるので、「早め・遅め」はずれて出ることがあります。ばらつきの数字は影響を受けません。</span>');
+    });
+  });
+}
+/* 聞き分け：2回続けて正解で差を0.7倍、1回まちがいで1.4倍（2-down 1-up、約71%正解の点に収束） */
+function vEar(){
+  var E=D.E; if(!E) return '';
+  return '<p class="note" style="text-align:center">'+(E.n+1)+'問目 ・ いまの差 '+Math.round(E.d)+'セント</p><div class="phase" id="dph">'+(E.wait?'2つ目は？':'聞く')+'</div><div class="row" style="justify-content:center"><button class="btn line" data-act="earAns" data-v="lo"'+(E.wait?'':' disabled')+'>低かった</button><button class="btn line" data-act="earAns" data-v="hi"'+(E.wait?'':' disabled')+'>高かった</button></div><div class="row" style="justify-content:center"><button class="btn sub" data-act="earPlay">もう一度聞く</button><button class="btn line" data-act="dStop">やめる</button></div>';
+}
+function earPlay(){ var E=D.E; tone(E.ref,600); tone(E.ref+(E.up?1:-1)*E.d/100,600,900); E.wait=false; render(); sleep(1550).then(function(){ if(D&&D.E===E){E.wait=true;render();} }); }
+function earNext(){ var E=D.E; E.ref=60+Math.random()*9; E.up=Math.random()<0.5; earPlay(); }
+function earAns(v){
+  var E=D.E, ok=(v==='hi')===E.up, dir; E.n++;
+  if(ok){ E.streak++; if(E.streak>=2){ E.streak=0; dir=-1; } } else { E.streak=0; dir=1; }
+  if(dir){ if(E.last&&dir!==E.last) E.rev.push(E.d); E.last=dir; E.d=Math.max(3,Math.min(200,E.d*(dir<0?0.7:1.4))); }
+  if(E.rev.length>=8||E.n>=40){
+    var r=E.rev.slice(-6), th=r.length?r.reduce(function(p,c){return p+c;},0)/r.length:E.d; D.val=th; D.goalOk=null; S.earTh=th;
+    finishDrill('聞き分けられる差：約<b>'+Math.round(th)+'セント</b>（'+E.n+'問）。'+(th<=OKC?'音程の判定で「合っている」とする幅（'+OKC+'セント）より小さいので、耳は十分です。音程がずれる原因は、聞いた音を声に変える部分にあります。「音程」の練習と「頭の中で鳴らしてから歌う」が効きます。':'まだ聞き分けにくい差があります。この練習を週に1〜2回続けると縮みます（音の聞き分けは練習で伸びることが知られています）。')+'<br><span class="note">スピーカーの音質や周りの音で変わります。</span>');
+    return;
+  }
+  earNext();
+}
+
 /* ---------- 音域 ---------- */
 function vRange(){
   var h='<section class="sheet"><h2>先に音域を測ります</h2><p class="note">練習の音を、無理なく出せる高さの中から選ぶためです。無理な高さで練習すると、喉を締める癖がつきます。</p>';
@@ -825,7 +1032,7 @@ var LEARN=[
  ['上手い人が一声目でわかる理由',[['weak','声の音響研究をもとにした推論']],
   ['一声目に出る違いは、4つに分けられます。どれも練習できる技術です。',
    '<ul><li><b>出だし：</b>息と声帯の閉じが同時に始まる。息が先にもれたり、喉を締めてぶつけたりしない。</li><li><b>最初から音程が合っている：</b>下からずり上げて探さない。</li><li><b>息もれが少なく、芯がある：</b>声帯がちょうどよく閉じて、息が効率よく声に変わっている（フロー発声、Sundberg）。</li><li><b>響きに明るい成分がある：</b>2〜4kHzあたりが強く、声が通る。</li></ul>',
-   'このアプリでは、出だしは準備の3つ目と音程の「出だし」の数字、芯は準備の1つ目と2つ目で扱います。']],
+   'このアプリでは、出だしは基礎の「出だしをそろえる」「3つの出だしを比べる」と一声目の練習、芯は「グッ・グッ・グー」「息もれを減らしていく」で扱います。']],
  ['体の使い方（息）',[['','仕組みは確立された知識'],['mid','練習法は伝統的な指導法']],
   ['声の大きさと高さは、声帯の下にかかる息の圧力で決まります。強すぎると喉が締まり、弱すぎると息もれした声になります。',
    '<b>コツ：</b>吸ったときに広がった肋骨とお腹まわりを、歌っている間すぐにしぼませません。ベルカント唱法の「支え（アッポッジョ）」と同じ考え方で、息が一気に出るのを防ぎます。',
@@ -833,7 +1040,7 @@ var LEARN=[
  ['喉（声帯）と高い音',[['','確立された知識']],
   ['高さは、声帯を「厚く使う筋肉（地声）」と「引き伸ばす筋肉（裏声）」のバランスで決まります。',
    '高い音が出ないのは、たいてい厚い地声のまま音量で押し上げているからです。',
-   '<ul><li><b>裏声そのものを鍛える：</b>弱い裏声は地声とつながりません。</li><li><b>地声と裏声を行き来する：</b>準備の「ストローでサイレン」がこれです。</li><li><b>高い音ほど音量を下げる：</b>力で押さないためです。</li></ul>',
+   '<ul><li><b>裏声そのものを鍛える：</b>弱い裏声は地声とつながりません。</li><li><b>地声と裏声を行き来する：</b>基礎の「ストローでサイレン」がこれです。</li><li><b>高い音ほど音量を下げる：</b>力で押さないためです。</li></ul>',
    '<b>高い音の母音：</b>「あ」を少し「お」寄りに、「い」を少し「え」寄りにすると出やすくなります（フォルマントの原理）。']],
  ['口の中',[['','仕組みは確立された知識'],['weak','イメージの効き方は人による']],
   ['声帯で作った音は、喉と口の形で響きが変わります（音源フィルタ理論、Fant）。',
@@ -1027,7 +1234,7 @@ function vLog(){
 }
 
 /* ---------- 描画と操作 ---------- */
-var V={home:vHome,warm:vWarm,sing:vSing,pitch:vPitch,learn:vLearn,log:vLog};
+var V={home:vHome,warm:vBase,sing:vSing,pitch:vPitch,learn:vLearn,log:vLog};
 function render(){
   view.innerHTML=V[tab]();
   document.getElementById('hdr').textContent=today().replace(/-/g,'.');
@@ -1037,10 +1244,22 @@ function render(){
 }
 function endSet(){ var avg=function(a){return a.reduce(function(p,c){return p+c;},0)/a.length;}; var s={d:today(),stage:S.stage,pattern:S.pattern,ok:SET.ok,dev:avg(SET.devs),onset:avg(SET.ons)}; S.sets.push(s); save(); SET={done:s}; T=null; }
 var ACT={
-  go:function(d){stopAll();tab=d.v;render();window.scrollTo(0,0);},
+  go:function(d){ if(d.v.indexOf('warm:')===0){ ACT.dOpen({v:d.v.slice(5)}); return; } stopAll();tab=d.v;render();window.scrollTo(0,0);},
   throat:function(d){day().throat=d.v;save();render();},
-  warmGo:function(d){warmGo(+d.v);},
-  warmStop:function(){stopAll();W=null;render();},
+  dOpen:function(d){stopAll();tab='warm';var r=drec(d.v);D={id:d.v,lv:Math.min(r.lv,DRI[d.v].lv.length),phase:'intro',menu:!!d.m};render();window.scrollTo(0,0);},
+  dLv:function(d){D.lv=+d.v;render();},
+  dGo:function(){dGo();},
+  dStop:function(){stopAll();capFull=false;D.phase='intro';D.E=null;render();},
+  dQuit:function(){stopAll();capFull=false;D=null;render();window.scrollTo(0,0);},
+  dCk:function(d){D.ck[+d.v]=+d.y;render();},
+  dSave:function(){var x=DRI[D.id],r=drec(D.id),chk=x.chk.every(function(_,i){return D.ck[i]===1;}),pass=chk&&D.goalOk!==false;
+    r.log.push({d:today(),lv:D.lv,val:D.val,pass:pass}); r.log=r.log.slice(-60); D.up=0;
+    if(pass&&D.lv===r.lv&&r.lv<x.lv.length){ var days={}; r.log.forEach(function(g){ if(g.lv===r.lv&&g.pass) days[g.d]=1; }); if(Object.keys(days).length>=2){ r.lv++; D.up=r.lv; } }
+    if(D.menu){ var dd=day(); dd.menuDone=dd.menuDone||{}; dd.menuDone[D.id]=true; }
+    save(); D.phase='saved'; render(); window.scrollTo(0,0);},
+  phones:function(){S.phones=!S.phones;save();render();},
+  earAns:function(d){earAns(d.v);},
+  earPlay:function(){earPlay();},
   stage:function(d){S.stage=+d.v;save();if(SET&&SET.done)SET=null;render();},
   pattern:function(d){S.pattern=d.v;save();if(SET&&SET.done)SET=null;render();},
   trial:function(){trial(false);},
@@ -1084,10 +1303,10 @@ var ACT={
   copy:function(){var el=document.getElementById('sum'); if(!el) return; var done=function(){CH.err='コピーしました。Claudeとの会話に貼り付けてください。';render();}; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).then(done,function(){el.select();}); else el.select();},
   wipe:function(){wipe=true;render();},
   wipeNo:function(){wipe=false;render();},
-  wipeYes:function(){K=null;L=null;RV=null;F=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
+  wipeYes:function(){K=null;L=null;RV=null;F=null;D=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
 };
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; if(L) L.run=null; if(F&&F.phase!=='sum'&&F.phase!=='res'&&F.phase!=='ready') F.phase=S.firstT&&F.reps.length?'ready':'set'; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
+  var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; if(L) L.run=null; if(D&&D.phase==='run'){D.phase='intro';D.E=null;} if(F&&F.phase!=='sum'&&F.phase!=='res'&&F.phase!=='ready') F.phase=S.firstT&&F.reps.length?'ready':'set'; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
   var a=e.target.closest('[data-act]'); if(a&&ACT[a.dataset.act]) ACT[a.dataset.act](a.dataset);
 });
 /* Claude との連動：claude.ai のページで開いたときだけ使える。Claude は歌声そのものは聞けないので、測った数字を渡す */
@@ -1096,7 +1315,7 @@ var RULES='あなたは、歌の練習アプリ「うたラボ」の中で、利
 '【大事な前提】あなたは歌声そのものを聞いていません。アプリが録音から測った数字だけを見ています。聞いたかのような言い方はしません。数字からは言えないことは、言えないと書きます。\n'+
 '【測定の限界】元の曲のメロディーとは比べていない（各音がいちばん近い音の真ん中からどれだけ外れているかを見ている）。全体の高さのずれは引いてある。「直す」の区切りは目安として置いた値。響きと息もれの数字はマイクで変わる。リズムは拍に合わせて録音したときだけ。\n'+
 '【使える知識】音源フィルタ理論、声区（地声と裏声）、フロー発声、半閉鎖声道エクササイズ（Titze）、Speech Level Singing（Riggs）、Estill Voice Training、Complete Vocal Technique、ベルカントとアッポッジョ（Lamperti、Miller）、コダーイ、ダルクローズ、運動学習（ガイダンス仮説、注意を体の外に向ける、分散練習、交互練習）。\n'+
-'【アプリの中の練習】準備（息を一定に吐く／ストローでサイレン／出だしをそろえる）、音程（表示を見ながら→歌った後に見る→先に自分で当てる）、歌って分析。できるだけこれらに結びつけます。\n'+
+'【アプリの中の練習】基礎（体・息・声帯の閉じ・喉をゆるめる発声・声区・響き・言葉・耳・リズム・クールダウンの32種類。音階はお手本を減らしていく3段階）、音程（表示を見ながら→歌った後に見る→先に自分で当てる）、歌って分析。できるだけこれらに結びつけます。\n'+
 '【答え方】日本語。やさしい言葉。記号（#や*）による装飾は使わず、ふつうの文と改行だけで書く。300〜500字。直すところは一度に1つか2つまで。それぞれに「なぜそうするか」を一言添える。イメージは体の外に向けたものを優先する。根拠の強さ（研究で確かめられている／指導法として広く使われている／推論）を区別して書く。人柄ではなく行動について言う。痛みや長引くかすれは耳鼻咽喉科を勧める。\n';
 function sumText(M){ return Object.keys(ISSUE).filter(function(id){return M.sev[id]!=null;}).map(function(id){var v=M.sev[id];return ISSUE[id].short+'：'+ISSUE[id].val(M)+' → '+(v>1?'直す':v>0.8?'もう少し':'良い');}).join('\n'); }
 function ctxText(){
