@@ -90,6 +90,7 @@ nav.tabs button.on{background:var(--accent-soft);color:var(--accent)}
 <nav class="tabs" aria-label="画面">
   <button data-tab="home">きょう</button>
   <button data-tab="warm">準備</button>
+  <button data-tab="sing">歌う</button>
   <button data-tab="pitch">音程</button>
   <button data-tab="learn">仕組み</button>
   <button data-tab="log">記録</button>
@@ -100,7 +101,7 @@ nav.tabs button.on{background:var(--accent-soft);color:var(--accent)}
 "use strict";
 /* ---------- 状態 ---------- */
 var KEY='uta-lab-v1';
-var S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[]};
+var S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};
 try{var raw=localStorage.getItem(KEY); if(raw) S=Object.assign(S,JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -111,16 +112,17 @@ var T=null;   /* 音程の1回 */
 var SET=null; /* 音程の5回1セット */
 var R=null;   /* 音域の測定 */
 var wipe=false;
+var K=null;   /* 歌って分析 */
 var view=document.getElementById('view');
 
 /* ---------- 音 ---------- */
-var ac=null, analyser=null, buf=null, yd=null;
+var ac=null, analyser=null, buf=null, yd=null, micStream=null, capStop=false, capFull=false;
 function ensureAC(){ if(!ac){var C=window.AudioContext||window.webkitAudioContext; ac=new C();} if(ac.state==='suspended') ac.resume(); return ac; }
 function micOn(){
   if(analyser) return Promise.resolve(true);
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){micState='blocked';return Promise.resolve(false);}
   return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}).then(function(st){
-    ensureAC(); var src=ac.createMediaStreamSource(st); analyser=ac.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
+    micStream=st; ensureAC(); var src=ac.createMediaStreamSource(st); analyser=ac.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
     buf=new Float32Array(2048); micState='ok'; return true;
   }).catch(function(){micState='blocked';return false;});
 }
@@ -142,7 +144,7 @@ function yin(b,sr){
   if(best<0){ var mn=1; for(tau=tMin;tau<=tMax;tau++){ if(yd[tau]<mn){mn=yd[tau];best=tau;} } if(mn>0.35) return {f:0,rms:rms}; }
   var a=yd[best-1], c0=yd[best], c=yd[best+1], den=a-2*c0+c, sh=den? 0.5*(a-c)/den : 0;
   if(sh>1||sh<-1) sh=0;
-  return {f:sr/(best+sh),rms:rms};
+  return {f:sr/(best+sh),rms:rms,ap:c0};
 }
 function detect(){ if(!analyser) return {f:0,rms:0}; analyser.getFloatTimeDomainData(buf); return yin(buf,ac.sampleRate); }
 function tone(m,ms,when){
@@ -160,13 +162,14 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 /* ms の間、毎フレーム声を調べる。mic が無いときは時間だけ進める */
 function capture(ms,onFrame){
   return new Promise(function(res){
-    var fr=[], t0=performance.now(), my=runId;
+    var fr=[], t0=performance.now(), my=runId; capStop=false;
     (function tick(){
       if(my!==runId) return;
       var t=performance.now()-t0, r=detect();
-      fr.push({t:t,f:r.f,rms:r.rms});
+      if(capFull&&r.f) r.spr=sprOf(buf,ac.sampleRate);
+      fr.push({t:t,f:r.f,rms:r.rms,ap:r.ap,spr:r.spr});
       if(onFrame) onFrame(t,r,fr);
-      if(t<ms) raf=requestAnimationFrame(tick); else res(fr);
+      if(t<ms&&!capStop) raf=requestAnimationFrame(tick); else res(fr);
     })();
   });
 }
@@ -217,13 +220,14 @@ function vHome(){
   h+='</section>';
   h+='<section class="sheet"><h2>きょうの練習</h2><div class="steps">'+
     '<div class="step"><span class="n">1</span><div class="t"><b>準備</b><small>息・ストロー・出だし。約2分</small></div><span class="done">'+wdone+' / 3</span><button class="btn sub" data-act="go" data-v="warm">開く</button></div>'+
-    '<div class="step"><span class="n">2</span><div class="t"><b>音程</b><small>5回で1セット。約3分</small></div><span class="done">'+psets+' セット</span><button class="btn sub" data-act="go" data-v="pitch">開く</button></div>'+
+    '<div class="step"><span class="n">2</span><div class="t"><b>歌って分析</b><small>10〜20秒歌うと、直すところを返します</small></div><span class="done">'+S.takes.filter(function(k){return k.d===today();}).length+' 回</span><button class="btn sub" data-act="go" data-v="sing">開く</button></div>'+
+    '<div class="step"><span class="n">3</span><div class="t"><b>音程</b><small>5回で1セット。約3分</small></div><span class="done">'+psets+' セット</span><button class="btn sub" data-act="go" data-v="pitch">開く</button></div>'+
     '</div><p class="note">1日に長くやるより、短い練習を毎日のほうが身につきます（分散練習）。</p></section>';
   if(S.sets.length>=2){
     var a=S.sets[0], b=S.sets[S.sets.length-1];
     h+='<section class="sheet"><h2>最初の自分と比べる</h2><div class="nums"><div><small>最初のセットのずれ</small><b>'+Math.round(a.dev)+'</b></div><div><small>いちばん新しいセット</small><b>'+Math.round(b.dev)+'</b></div><div><small>いまの段階</small><b>'+S.stage+'</b></div></div><p class="note">数字はセント（半音の100分の1）。小さいほど合っています。</p></section>';
   }
-  h+='<section class="sheet"><h2>この順番の理由</h2><p class="note">息と声帯が安定していないと、音程の練習をしても声がぶれます。だから準備を先に置いています。高い音と響きの練習は、この2つの後に足していきます。仕組みとコツは「仕組み」のタブでいつでも読めます。</p></section>';
+  h+='<section class="sheet"><h2>この順番の理由</h2><p class="note">息と声帯が安定していないと、歌っても声がぶれます。だから準備を先に置いています。次に歌って、いま直すところを知り、それに合った練習へ進みます。高い音と響きの練習は、この2つの後に足していきます。仕組みとコツは「仕組み」のタブでいつでも読めます。</p></section>';
   return h;
 }
 
@@ -408,6 +412,208 @@ function drawLane(cv,notes,len,fr){
   });
 }
 
+/* ---------- 歌って分析 ---------- */
+var fre=null, fim=null, hann=null;
+function fft(re,im){
+  var n=re.length,i,j=0,k,len,t;
+  for(i=1;i<n;i++){ var bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit; if(i<j){t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;} }
+  for(len=2;len<=n;len<<=1){ var ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(i=0;i<n;i+=len){ var cr=1,ci=0; for(k=0;k<len/2;k++){ var a=i+k,b=a+len/2, xr=re[b]*cr-im[b]*ci, xi=re[b]*ci+im[b]*cr;
+      re[b]=re[a]-xr; im[b]=im[a]-xi; re[a]+=xr; im[a]+=xi; t=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=t; } } }
+}
+/* 響きの明るさ：2〜4kHzのいちばん強い成分と、2kHzより下のいちばん強い成分の差（dB）。Omori らの Singing Power Ratio の考え方 */
+function sprOf(b,sr){
+  var n=2048,i; if(!fre){fre=new Float32Array(n);fim=new Float32Array(n);hann=new Float32Array(n);for(i=0;i<n;i++)hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(n-1));}
+  for(i=0;i<n;i++){fre[i]=b[i]*hann[i];fim[i]=0;}
+  fft(fre,fim);
+  var hz=sr/n, lo=0, hi=0;
+  for(i=Math.ceil(50/hz);i<4000/hz;i++){ var m=fre[i]*fre[i]+fim[i]*fim[i]; if(i*hz<2000){if(m>lo)lo=m;} else if(m>hi)hi=m; }
+  return lo>0&&hi>0? 10*Math.log(hi/lo)/Math.LN10 : -60;
+}
+function wrap(c){return ((c+50)%100+100)%100-50;}
+function analyzeTake(fr){
+  var i, pts=fr.map(function(x){return {t:x.t,m:x.f?f2m(x.f):null,rms:x.rms,ap:x.ap,spr:x.spr};});
+  var raw=pts.map(function(p){return p.m;});
+  for(i=1;i<pts.length-1;i++) if(raw[i-1]!=null&&raw[i]!=null&&raw[i+1]!=null) pts[i].m=median([raw[i-1],raw[i],raw[i+1]]);
+  var voiced=pts.filter(function(p){return p.m!=null;});
+  var total=fr.length?fr[fr.length-1].t:0;
+  if(voiced.length<60||voiced.length/pts.length*total<2500) return {short:true};
+  /* 音に区切る */
+  var segs=[],cur=null,lastT=-1e9;
+  pts.forEach(function(p){
+    if(p.m==null){ if(cur){segs.push(cur);cur=null;} return; }
+    if(!cur) cur={p:[p],after:p.t-lastT>120,pend:null};
+    else{
+      var ref=median(cur.p.slice(-8).map(function(q){return q.m;}));
+      if(Math.abs(p.m-ref)>0.7){ cur.pend=(cur.pend||[]).concat([p]); if(cur.pend.length>=4){ segs.push(cur); cur={p:cur.pend,after:false,pend:null}; } }
+      else{ if(cur.pend){cur.p=cur.p.concat(cur.pend);cur.pend=null;} cur.p.push(p); }
+    }
+    lastT=p.t;
+  });
+  if(cur) segs.push(cur);
+  var notes=[];
+  segs.forEach(function(sg){
+    var t0=sg.p[0].t, t1=sg.p[sg.p.length-1].t, dur=t1-t0; if(dur<180) return;
+    var body=sg.p.filter(function(q){return q.t>=t0+Math.min(120,dur*0.3);}), center=median(body.map(function(q){return q.m;}));
+    var head=sg.p.filter(function(q){return q.t<t0+90;});
+    var n={t0:t0,dur:dur,center:center,after:sg.after,onset:(median(head.map(function(q){return q.m;}))-center)*100,wob:null,drift:null,vib:false};
+    if(dur>=600){
+      var b2=sg.p.filter(function(q){return q.t>=t0+150&&q.t<=t1-50;}), ms=b2.map(function(q){return q.m;}), k=Math.max(2,Math.floor(ms.length*0.3));
+      n.drift=(median(ms.slice(-k))-median(ms.slice(0,k)))*100;
+      var md=median(ms); n.wob=median(ms.map(function(x){return Math.abs(x-md);}))*148;
+      var res=ms.map(function(x,j){var a=ms.slice(Math.max(0,j-6),j+7);return x-a.reduce(function(p,c){return p+c;},0)/a.length;}), zc=0;
+      for(var j=1;j<res.length;j++) if(res[j-1]*res[j]<0) zc++;
+      var rate=zc/2/((b2[b2.length-1].t-b2[0].t)/1000), ext=(pct(res,0.9)-pct(res,0.1))/2*100;
+      n.vib=dur>=700&&rate>=4&&rate<=8&&ext>=15&&ext<=150;
+    }
+    notes.push(n);
+  });
+  if(notes.length<4) return {short:true};
+  /* 伴奏なしで歌うと全体の高さは自由なので、全体のずれを引いてから、1音ごとのずれを見る */
+  var best=0,bs=1e18,o;
+  for(o=-50;o<50;o++){ var sum=0; notes.forEach(function(n){sum+=Math.min(n.dur,1000)*Math.abs(wrap((n.center-Math.round(n.center))*100-o));}); if(sum<bs){bs=sum;best=o;} }
+  var wsum=0; notes.forEach(function(n){n.r=wrap((n.center-Math.round(n.center))*100-best); wsum+=Math.min(n.dur,1000);});
+  var M={off:best,notes:notes.length,dev:bs/wsum};
+  var heads=notes.filter(function(n){return n.after;}); if(heads.length<3) heads=notes;
+  M.scoop=heads.filter(function(n){return n.onset<-45;}).length/heads.length;
+  var longs=notes.filter(function(n){return n.wob!=null;}), plain=longs.filter(function(n){return !n.vib;});
+  M.wob=plain.length>=2? median(plain.map(function(n){return n.wob;})) : null;
+  M.drift=longs.length>=2? median(longs.map(function(n){return n.drift;})) : null;
+  M.vib=longs.filter(function(n){return n.vib;}).length;
+  var cs=notes.map(function(n){return n.center;}); M.lo=Math.min.apply(null,cs); M.hi=Math.max.apply(null,cs);
+  M.high=null;
+  if(notes.length>=6&&M.hi-M.lo>=5){
+    var srt=notes.slice().sort(function(a,b){return a.center-b.center;}), cut=Math.floor(srt.length*2/3), top=srt.slice(cut), rest=srt.slice(0,cut);
+    var avg=function(a,f){return a.reduce(function(p,c){return p+f(c);},0)/a.length;};
+    M.high={flat:avg(top,function(n){return n.r;})-avg(rest,function(n){return n.r;}),dev:avg(top,function(n){return Math.abs(n.r);})-avg(rest,function(n){return Math.abs(n.r);})};
+  }
+  M.ap=median(voiced.map(function(p){return p.ap||0;}));
+  var sp=voiced.filter(function(p){return p.spr!=null;}).map(function(p){return p.spr;}); M.spr=sp.length?median(sp):null;
+  var db=voiced.map(function(p){return 20*Math.log(p.rms)/Math.LN10;}); M.dyn=pct(db,0.9)-pct(db,0.1);
+  /* 重さ：しきい値で割った値。しきい値はすべて目安として置いたもの */
+  var sev={pitch:M.dev/17, onset:M.scoop/0.4, wob:M.wob==null?null:M.wob/20, drift:M.drift==null?null:-M.drift/25,
+    high:M.high?Math.max(-M.high.flat/15,M.high.dev/12):null, breathy:M.ap/0.06, dark:M.spr==null?null:-M.spr/27, dyn:0.7*6/Math.max(M.dyn,0.1)};
+  var ids=Object.keys(sev).filter(function(k){return sev[k]!=null;});
+  ids.forEach(function(k){sev[k]=Math.min(sev[k],2.5);});
+  M.sev=sev;
+  M.top=ids.filter(function(k){return sev[k]>1;}).sort(function(a,b){return sev[b]*ISSUE[b].w-sev[a]*ISSUE[a].w;}).slice(0,2);
+  M.good=ids.filter(function(k){return k!=='dyn';}).sort(function(a,b){return sev[a]-sev[b];})[0];
+  M.pts=voiced.map(function(p){return [Math.round(p.t),Math.round(p.m*100)/100];}); M.total=total;
+  return M;
+}
+var ISSUE={
+ pitch:{w:1,short:'音程',title:'音の高さが、音の真ん中からずれている',good:'音の高さが安定して合っています',
+  val:function(M){return '1音ごとのずれの平均：'+Math.round(M.dev)+'セント（12以下なら良い、17を超えると目立つ）';},
+  why:'聞いた音を声に変える対応づけが、まだ正確ではありません。耳の問題ではないことがほとんどです。',
+  tip:'「音程」の練習で、1音ずつ合わせる感覚を作ります。表示を見る段階から始めて、少しずつ表示を減らします。',go:['pitch','音程の練習へ']},
+ onset:{w:1,short:'出だし',title:'フレーズの出だしを、下からずり上げている',good:'フレーズの出だしから音が合っています',
+  val:function(M){return '低く入った出だしの割合：'+Math.round(M.scoop*100)+'%';},
+  why:'声を出してから音を探しています。一声目で上手く聞こえるかどうかは、ここで決まります。',
+  tip:'歌い出す前に、頭の中で最初の音をはっきり鳴らします。それから声を出します。わざとしゃくり上げる表現とは別に、まっすぐ入れるようにしておきます。',go:['warm','準備「出だしをそろえる」へ']},
+ wob:{w:1.1,short:'ぶれ',title:'伸ばす音がぶれる',good:'伸ばす音がまっすぐ安定しています',
+  val:function(M){return '伸ばす音のぶれ：'+Math.round(M.wob)+'セント（20を超えると目立つ）';},
+  why:'息の圧力が一定ではありません。声の高さは息の圧力で変わるので、息が揺れると音も揺れます。',
+  tip:'準備の「息を一定に吐く」と同じ吐き方で伸ばします。吸って広がった肋骨を、伸ばしている間しぼませません。',go:['warm','準備「息を一定に吐く」へ']},
+ drift:{w:1.1,short:'語尾',title:'伸ばす音の終わりで、音が下がる',good:'語尾まで音の高さを保てています',
+  val:function(M){return '伸ばす音の始めと終わりの差：'+sgn(M.drift)+'セント';},
+  why:'フレーズの終わりで息の支えが抜けています。',
+  tip:'語尾ほど、肋骨を広げたまま保ちます。最後の音を、少し先の壁まで届けるつもりで終えます。',go:['warm','準備「息を一定に吐く」へ']},
+ high:{w:0.9,short:'高音',title:'高い音で、低くなる・不安定になる',good:'高い音でも音が崩れていません',
+  val:function(M){return '高い音は、ほかの音より '+sgn(M.high.flat)+'セント、ずれの大きさは '+sgn(M.high.dev)+'セント';},
+  why:'厚い地声のまま、力で押し上げています。押すほど声帯が固まり、届かなくなります。',
+  tip:'高い音ほど音量を下げて、軽く出します。「あ」は少し「お」寄りにします。準備の「ストローでサイレン」で、地声と裏声の行き来を毎日やります。',go:['warm','準備「ストローでサイレン」へ']},
+ breathy:{w:1.1,short:'息もれ',title:'息もれが多く、声に芯がない',good:'息もれが少なく、声に芯があります',
+  val:function(M){return '声に混ざる雑音の割合：'+(M.ap*100).toFixed(1)+'（6を超えると多い）';},
+  why:'声帯の閉じが弱く、息が声に変わりきっていません。わざと息を混ぜる歌い方なら、問題ではありません。',
+  tip:'準備の「出だしをそろえる」で、息と声を同時に始めます。「ストローでサイレン」も、声帯が効率よく閉じる助けになります。',go:['warm','準備へ']},
+ dark:{w:0.8,short:'響き',title:'響きがこもっている',good:'響きに明るい成分があります',
+  val:function(M){return '明るい成分の強さ：'+Math.round(M.spr)+'dB（0に近いほど明るい。マイクで変わります）';},
+  why:'舌が奥に引っこむか、口の開きが小さく、高い成分が外に出ていません。',
+  tip:'舌の先を下の前歯の裏につけます。意地悪な子どもの「ネェ〜」の声を少し混ぜます。声を前歯の先から前に出すつもりで歌います。',go:['learn','「口の中」を読む']},
+ dyn:{w:0.6,short:'強弱',title:'強弱の幅が小さい',good:'',
+  val:function(M){return '声の大きさの幅：'+Math.round(M.dyn)+'dB';},
+  why:'全部が同じ大きさだと、平らに聞こえます。',
+  tip:'フレーズの中で、いちばん聞かせたい言葉を1つ決めます。そこへ向かって大きくし、過ぎたら小さくします。',go:null}
+};
+var recorder=null;
+function recStop(){ if(recorder&&recorder.state!=='inactive'){ try{recorder.stop();}catch(e){} } }
+function singGo(){
+  stopAll(); var my=runId; K={phase:'rec'};
+  micOn().then(function(mic){
+    if(my!==runId) return;
+    if(!mic){ K=null; render(); return; }
+    render();
+    try{ var chunks=[]; recorder=new MediaRecorder(micStream); recorder.ondataavailable=function(e){chunks.push(e.data);};
+      recorder.onstop=function(){ if(K&&K.phase!=='rec'&&chunks.length){ K.url=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType})); if(tab==='sing') render(); } };
+      recorder.start(); }catch(e){ recorder=null; }
+    capFull=true;
+    capture(20000,function(t,r){
+      var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,t/200)+'%';
+      var hd=document.getElementById('hear'); if(hd){hd.className='hear'+(r.f?' on':'');hd.textContent=r.f?'聞こえています':'声を待っています';}
+    }).then(function(fr){ capFull=false; K.phase='result'; recStop(); takeDone(analyzeTake(fr)); });
+  });
+}
+function singFile(file){
+  stopAll(); var my=runId; K={phase:'load',url:URL.createObjectURL(file)}; render(); ensureAC();
+  var rd=new FileReader();
+  rd.onerror=function(){ if(my===runId){K={err:'ファイルを読めませんでした。'};render();} };
+  rd.onload=function(){
+    ac.decodeAudioData(rd.result,function(ab){
+      if(my!==runId) return;
+      var d=ab.getChannelData(0), sr=ab.sampleRate, hop=Math.round(sr/50), end=Math.min(d.length,sr*45)-2048, fr=[], pos=0;
+      (function chunk(){
+        if(my!==runId) return;
+        for(var c=0;c<120&&pos<end;c++,pos+=hop){ var sub=d.subarray(pos,pos+2048), r=yin(sub,sr); if(r.f) r.spr=sprOf(sub,sr); fr.push({t:pos/sr*1000,f:r.f,rms:r.rms,ap:r.ap,spr:r.spr}); }
+        var b=document.getElementById('bar'); if(b) b.style.width=Math.min(100,pos/Math.max(end,1)*100)+'%';
+        if(pos<end) setTimeout(chunk,0); else { K.phase='result'; takeDone(analyzeTake(fr)); }
+      })();
+    },function(){ if(my===runId){K={err:'この形式の音声は読めませんでした。m4a・mp3・wav を試してください。'};render();} });
+  };
+  rd.readAsArrayBuffer(file);
+}
+function takeDone(M){
+  K.M=M;
+  if(!M.short){ S.takes.push({d:today(),dev:M.dev,scoop:M.scoop,wob:M.wob,drift:M.drift,ap:M.ap,spr:M.spr,dyn:M.dyn,top:M.top}); save(); }
+  render(); window.scrollTo(0,0);
+}
+function vSing(){
+  var h='';
+  if(!K||K.err){
+    h+=micNote()+'<section class="sheet"><h2>歌って分析</h2><p>好きな曲の一部を、<b>伴奏なしで10〜20秒</b>歌います。歌い終わると、いま直すところを最大2つ返します。</p>'+(K&&K.err?'<div class="warnbox">'+K.err+'</div>':'')+
+      '<div class="row"><button class="btn big" data-act="singGo">録音して分析する</button></div>'+
+      '<h3>録音したファイルを使う</h3><p class="note">スマホの録音アプリなどで録った歌声を選びます。マイクが使えない場所でも分析できます（最初の45秒まで）。</p><input type="file" id="file" accept="audio/*">'+
+      '<p class="note">伴奏やイヤホンから漏れた音が入ると、正しく分析できません。静かな場所で、声だけを録ります。</p></section>';
+    if(S.takes.length){ var k=S.takes[S.takes.length-1]; h+='<section class="sheet"><h3>前回の直すところ</h3><p>'+(k.top.length?k.top.map(function(id){return ISSUE[id].title;}).join('／'):'目立つところはありませんでした')+'</p><p class="note">今回は、そこだけを意識して歌ってみます。一度に直すのは1つか2つまでにします。</p></section>'; }
+    return h;
+  }
+  if(K.phase==='rec') return '<section class="sheet"><div class="phase c-ok">歌う</div><div class="bar"><i id="bar"></i></div><div class="hear" id="hear">声を待っています</div><div class="row"><button class="btn big" data-act="singStop">止めて分析する</button></div><p class="note">最大20秒で自動的に止まります。</p></section>';
+  if(K.phase==='load') return '<section class="sheet"><div class="phase">分析しています</div><div class="bar"><i id="bar"></i></div></section>';
+  var M=K.M, audio=K.url?'<audio controls src="'+K.url+'" style="width:100%"></audio>':'';
+  if(M.short) return '<section class="sheet"><h2>分析できませんでした</h2><p>歌声が短いか、うまく拾えませんでした。声の出ている時間が3秒以上、音が4つ以上になるように歌います。</p>'+audio+'<div class="row"><button class="btn big" data-act="singNew">もう一度</button></div></section>';
+  h+='<section class="sheet"><h2>今回の歌</h2>'+audio+(K.url?'<p class="note">まず自分で聞きます。歌っている最中の聞こえ方と、録音の聞こえ方は違います。</p>':'')+
+    '<canvas class="lane" id="take"></canvas><p class="note">横線は音の真ん中。点が線に乗っているほど合っています。橙は高い、青は低い。'+nname(M.lo)+' 〜 '+nname(M.hi)+'、'+M.notes+'音'+(M.vib?'、ビブラート'+M.vib+'か所':'')+'。</p>'+
+    (M.good&&ISSUE[M.good].good&&M.sev[M.good]<0.8?'<p><b class="c-ok">良かったところ：</b>'+ISSUE[M.good].good+'。</p>':'')+'</section>';
+  if(!M.top.length) h+='<section class="sheet"><h2>直すところ</h2><p>今回見た項目の中に、目立つ問題はありませんでした。別の曲や、もっと高い音のある部分でも試します。</p></section>';
+  M.top.forEach(function(id,i){ var I=ISSUE[id];
+    h+='<section class="sheet"><span class="code">直すところ '+(i+1)+'</span><h2>'+I.title+'</h2><dl class="kv"><dt>今の位置</dt><dd>'+I.val(M)+'</dd><dt>なぜ起きるか</dt><dd>'+I.why+'</dd><dt>次の一手</dt><dd>'+I.tip+'</dd></dl>'+(I.go?'<div class="row"><button class="btn sub" data-act="go" data-v="'+I.go[0]+'">'+I.go[1]+'</button></div>':'')+'</section>'; });
+  var rows=Object.keys(ISSUE).filter(function(id){return M.sev[id]!=null;}).map(function(id){ var s=M.sev[id]; return '<tr><td>'+ISSUE[id].short+'</td><td>'+ISSUE[id].val(M)+'</td><td><span class="tag '+(s>1?'weak':s>0.8?'mid':'')+'">'+(s>1?'直す':s>0.8?'もう少し':'良い')+'</span></td></tr>'; }).join('');
+  h+='<section class="sheet"><div class="row"><button class="btn big" data-act="singNew">もう一度歌う</button></div>'+
+    '<details><summary>見た項目すべて</summary><div><div class="scroll"><table>'+rows+'</table></div></div></details>'+
+    '<details><summary>この分析でわかること・わからないこと</summary><div><ul><li>元の曲のメロディーとは比べていません。歌った音が、それぞれいちばん近い音の真ん中からどれだけ外れているかを見ています。音そのものを間違えていても、ここではわかりません。</li><li>リズムは見ていません。</li><li>「直す」の区切りは、目安として置いた値です。確かな基準ではありません。比べる相手は過去の自分にします。</li><li>響きと息もれの数字は、マイクと部屋で変わります。</li><li>原因とコツの対応は、指導の経験則と推論です。</li></ul></div></details></section>';
+  return h;
+}
+function drawTake(cv,M){
+  var dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w) return;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  var g=cv.getContext('2d'), cs=getComputedStyle(document.documentElement), col=function(n){return cs.getPropertyValue(n).trim();};
+  g.setTransform(dpr,0,0,dpr,0,0);
+  var o=M.off/100, lo=Math.floor(M.lo)-2, hi=Math.ceil(M.hi)+2, y=function(m){return h-(m-lo)/(hi-lo)*h;};
+  g.strokeStyle=col('--rule'); g.lineWidth=1;
+  for(var m=lo;m<=hi;m++){ g.beginPath(); g.moveTo(0,y(m+o)); g.lineTo(w,y(m+o)); g.stroke(); }
+  M.pts.forEach(function(p){ var c=wrap((p[1]-o-Math.round(p[1]-o))*100); if(p[1]<lo||p[1]>hi) return;
+    g.fillStyle=Math.abs(c)<=20?col('--accent'):(c>0?col('--hi'):col('--lo')); g.beginPath(); g.arc(p[0]/M.total*w,y(p[1]),2,0,6.3); g.fill(); });
+}
+
 /* ---------- 音域 ---------- */
 function vRange(){
   var h='<section class="sheet"><h2>先に音域を測ります</h2><p class="note">練習の音を、無理なく出せる高さの中から選ぶためです。無理な高さで練習すると、喉を締める癖がつきます。</p>';
@@ -485,6 +691,7 @@ function vLog(){
     if(S.est.length>=3) h+='<p>自分の感覚が当たった割合：<b>'+Math.round(S.est.reduce(function(p,c){return p+c;},0)/S.est.length*100)+'%</b>（'+S.est.length+'回）</p>';
     h+='<div class="scroll"><table><tr><th>日</th><th>段階</th><th>音の数</th><th>合った</th><th>ずれ</th><th>出だし</th></tr>'+S.sets.slice().reverse().slice(0,30).map(function(s){return '<tr><td>'+s.d.slice(5)+'</td><td>'+s.stage+'</td><td>'+PAT[s.pattern].name+'</td><td>'+s.ok+'/5</td><td>'+Math.round(s.dev)+'</td><td>'+Math.round(s.onset)+'</td></tr>';}).join('')+'</table></div></section>';
   }
+  if(S.takes.length) h+='<section class="sheet"><h2>歌って分析の記録</h2><div class="scroll"><table><tr><th>日</th><th>音のずれ</th><th>ぶれ</th><th>息もれ</th><th>響き</th><th>直すところ</th></tr>'+S.takes.slice().reverse().slice(0,30).map(function(k){return '<tr><td>'+k.d.slice(5)+'</td><td>'+Math.round(k.dev)+'</td><td>'+(k.wob==null?'-':Math.round(k.wob))+'</td><td>'+(k.ap*100).toFixed(1)+'</td><td>'+(k.spr==null?'-':Math.round(k.spr))+'</td><td>'+k.top.map(function(id){return ISSUE[id].short;}).join('、')+'</td></tr>';}).join('')+'</table></div><p class="note">響きの数字はマイクで変わるので、同じ端末どうしで比べます。</p></section>';
   var sir=Object.keys(S.days).filter(function(k){return S.days[k].sirenHi;}).sort().slice(-10);
   if(sir.length) h+='<section class="sheet"><h2>サイレンで届いた上の音</h2><div class="scroll"><table><tr><th>日</th><th>上の音</th></tr>'+sir.reverse().map(function(k){return '<tr><td>'+k.slice(5)+'</td><td>'+nname(S.days[k].sirenHi)+'</td></tr>';}).join('')+'</table></div></section>';
   h+='<section class="sheet"><h3>記録の置き場所</h3><p class="note">記録は、この端末のこのブラウザの中だけに保存されます。</p><div class="row">'+(wipe?'<button class="btn" style="background:var(--bad)" data-act="wipeYes">本当に全部消す</button><button class="btn line" data-act="wipeNo">やめる</button>':'<button class="btn line" data-act="wipe">記録を全部消す</button>')+'</div></section>';
@@ -492,11 +699,12 @@ function vLog(){
 }
 
 /* ---------- 描画と操作 ---------- */
-var V={home:vHome,warm:vWarm,pitch:vPitch,learn:vLearn,log:vLog};
+var V={home:vHome,warm:vWarm,sing:vSing,pitch:vPitch,learn:vLearn,log:vLog};
 function render(){
   view.innerHTML=V[tab]();
   document.getElementById('hdr').textContent=today().replace(/-/g,'.');
   Array.prototype.forEach.call(document.querySelectorAll('nav.tabs button'),function(b){b.className=b.dataset.tab===tab?'on':'';});
+  if(tab==='sing'&&K&&K.phase==='result'&&K.M&&!K.M.short){ var tk=document.getElementById('take'); if(tk) drawTake(tk,K.M); }
   if(tab==='pitch'&&T&&T.phase==='result'&&T.res&&T.res.heard){ var p=PAT[S.pattern], cv=document.getElementById('lane'); if(cv) drawLane(cv,p.off.map(function(o){return T.root+o;}),p.len,T.frames); }
 }
 function endSet(){ var avg=function(a){return a.reduce(function(p,c){return p+c;},0)/a.length;}; var s={d:today(),stage:S.stage,pattern:S.pattern,ok:SET.ok,dev:avg(SET.devs),onset:avg(SET.ons)}; S.sets.push(s); save(); SET={done:s}; T=null; }
@@ -516,14 +724,18 @@ var ACT={
   rangeGo:function(d){rangeGo(d.v);},
   rangeRedo:function(){stopAll();T=null;SET=null;R={};render();},
   preset:function(d){var a=d.v.split(',');S.range={lo:+a[0],hi:+a[1]};save();R=null;render();},
+  singGo:function(){singGo();},
+  singStop:function(){capStop=true;},
+  singNew:function(){K=null;render();window.scrollTo(0,0);},
   wipe:function(){wipe=true;render();},
   wipeNo:function(){wipe=false;render();},
-  wipeYes:function(){S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
+  wipeYes:function(){K=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
 };
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab]'); if(t){ stopAll(); W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
+  var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
   var a=e.target.closest('[data-act]'); if(a&&ACT[a.dataset.act]) ACT[a.dataset.act](a.dataset);
 });
+document.addEventListener('change',function(e){ if(e.target.id==='file'&&e.target.files[0]) singFile(e.target.files[0]); });
 render();
 })();
 </script>
