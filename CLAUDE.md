@@ -13,7 +13,7 @@
 | `app/jibun-lab-v2.html` | v2 の試作（設計メモ11章の設計を実装。claude.ai の Artifact：https://claude.ai/artifact/AmPybGnd6Afc9iFomnbtMH） |
 | `app/jibun-lab-v3.html` | v3 の試作（設計メモ12章の再構築を実装。claude.ai の Artifact：https://claude.ai/artifact/1w4D4sgLbWMjmUnktqqrSp） |
 | `app/uta-lab.html` | 別アプリ「うたラボ」（歌の練習。自分用）。claude.ai の Artifact 用の形 |
-| `app/uta-lab-browser.html` | うたラボのブラウザ用（`uta-lab.html` を完全なHTMLで包んだもの。マイクを使うにはこちらを開く。本体を直したら作り直す） |
+| `uta/` | うたラボのホーム画面に追加できる版（GitHub Pages で公開する。マイクが使える）。本体 `app/uta-lab.html` を直したら `tools/build-uta.sh` で作り直す |
 | `tools/q12-form.gs` | 周りの就活生への聞き取り（Q12）のGoogleフォームを作る Apps Script |
 
 元の claude.ai 上の文書（ここに書き出したものと同じ内容）：
