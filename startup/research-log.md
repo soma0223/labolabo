@@ -62,6 +62,15 @@
 | atsumeru | https://apps.apple.com/us/app/atsumeru/id6748431704 |
 | Otaac | https://apps.apple.com/jp/app/id1498576032 |
 
+### 女子プロレス
+
+| 内容 | 出どころ | 強さ |
+|---|---|---|
+| スターダムの過去最多の動員は8,015人（2026年4月26日、横浜アリーナ） | https://www.daily.co.jp/ring/2026/04/26/0020289669.shtml ／ https://prtimes.jp/main/html/rd/p/000009516.000014827.html | ○ |
+| プロレスカレンダー：団体ごとの日程、観戦した試合の写真や感想の保存 | https://apps.apple.com/jm/app/id6463606317 | ストアの説明 |
+| 新日コレクション：新日本プロレス公式、会場でのチェックイン | https://apps.apple.com/jp/app/id1134645549 | ストアの説明 |
+| ファンの観戦頻度・出費の調査 | 見つからず | － |
+
 ### まだ調べていないこと
 
 - 各競合の実際の利用者数、レビューの中身（不満の内容）
