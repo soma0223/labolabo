@@ -1,0 +1,189 @@
+<title>推し活アプリ 逆算ロードマップ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 1本の時間軸（ガント）を主役に、下に段階ごとのカード。段階の色はペンライトの色に見立てる */
+:root{
+  --bg:#f7f6fb; --surface:#ffffff; --fg:#23212c; --muted:#6a6678; --line:#dcd8e6; --grid:#ebe8f2;
+  --c1:#e2508f; --c2:#f29a2e; --c3:#2f9ad6; --c4:#3aa676; --c5:#7d5bd6;
+  --today:#23212c; --goal:#c23b6e;
+  --f-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17161d; --surface:#211f29; --fg:#ecebf2; --muted:#a39fb3; --line:#3a3746; --grid:#2b2935;
+  --c1:#ff6fa8; --c2:#ffb04d; --c3:#55b6ef; --c4:#5cc794; --c5:#a083f0; --today:#ecebf2; --goal:#ff7aa8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17161d; --surface:#211f29; --fg:#ecebf2; --muted:#a39fb3; --line:#3a3746; --grid:#2b2935;
+  --c1:#ff6fa8; --c2:#ffb04d; --c3:#55b6ef; --c4:#5cc794; --c5:#a083f0; --today:#ecebf2; --goal:#ff7aa8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(24px,4.4vw,34px);line-height:1.3;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:20px;margin:0 0 4px;text-wrap:balance}
+p{margin:0;max-width:65ch}
+.lead{color:var(--muted)}
+.goal{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.goal .date{font-family:var(--f-mono);font-size:22px;color:var(--goal)}
+.goal .what{font-weight:700;min-width:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.chart{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 8px}
+.chart svg{display:block;min-width:860px;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:22px;height:10px;border-radius:3px;background:var(--muted)}
+.sw.slack{background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 6px);opacity:.7}
+.sw.gate{width:11px;height:11px;border-radius:2px;transform:rotate(45deg);background:var(--fg)}
+.back{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
+.back .step{padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);white-space:nowrap}
+.back .step.g{border-color:var(--goal);color:var(--goal);font-weight:700}
+.back .arr{color:var(--muted)}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0;border-top:5px solid var(--sc)}
+.card .no{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--sc)}
+.card h3{margin:0;font-family:var(--f-display);font-size:17px}
+.card .when{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:14px}
+.card dt{color:var(--muted);white-space:nowrap}
+.card dd{margin:0;min-width:0}
+.rules{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.rules li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.rules b{display:block}
+.foot{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.today-line{animation:pulse 2.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.45}}}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>推し活アプリ 逆算ロードマップ</h1>
+    <p class="lead">期限から逆にたどって、各段階の締切を決めた。締切を過ぎたら延ばさず、範囲を削るか、前の段階に戻るかを決める。</p>
+  </header>
+
+  <section class="goal" aria-label="期限">
+    <span class="date mono">2027.03.31</span>
+    <span class="what">振り返りまで終えて、就活（ES・面接）で話せる形にまとめる</span>
+    <span class="lead" style="font-size:13px">夏のインターンの応募が4〜6月ごろに始まる見込みのため</span>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2>逆算の順番</h2>
+    <div class="back" aria-label="期限から逆にたどった順番">
+      <span class="step g">期限 3/31</span><span class="arr">←</span>
+      <span class="step">振り返り</span><span class="arr">←</span>
+      <span class="step">お金を試す</span><span class="arr">←</span>
+      <span class="step">知らない人に出す</span><span class="arr">←</span>
+      <span class="step">家族に使ってもらう</span><span class="arr">←</span>
+      <span class="step">最小限を作る</span><span class="arr">←</span>
+      <span class="step">今日 11/14</span>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2>時間軸</h2>
+    <div class="chart" role="img" aria-label="2026年11月14日から2027年3月31日までの5段階の時間軸">
+      <svg id="g" viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="legend">
+      <span><i class="sw"></i>必要な最短の期間</span>
+      <span><i class="sw slack"></i>余裕</span>
+      <span><i class="sw gate"></i>関門（進む条件を確かめる日）</span>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>段階ごとの中身</h2>
+    <div class="stages" id="cards"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2>守ること</h2>
+    <ul class="rules">
+      <li><b>締切は延ばさない</b>人は作業の時間を短く見積もる（計画の誤り）。だから余裕を先に入れ、超えたら「削る」か「戻る」を決める。</li>
+      <li><b>広告は使わない</b>1人集めるのに約3,600円かかり、予算に合わない。</li>
+      <li><b>App Storeにはまだ出さない</b>ブラウザで動く形なら、本名が出ず、年会費も審査も要らない。</li>
+      <li><b>振り返りは必ずやる</b>途中で止まっても、どこで止まったかが学びになる。</li>
+    </ul>
+  </section>
+
+  <p class="foot">対象：アニメキャラを推す人。用事：グッズの「持っているもの・譲・求・交換の約束」を1か所で見て、Xの募集画像を作れること。</p>
+</div>
+
+<script>
+const START=new Date(2026,10,14), END=new Date(2027,2,31);
+const day=d=>Math.round((d-START)/864e5);
+const TOTAL=day(END);
+const D=(m,d,y)=>new Date(y??(m>=11?2026:2027),m-1,d);
+const stages=[
+ {no:"01",name:"最小限を作る",s:D(11,14),e:D(11,23),min:3,c:"--c1",
+  todo:"ブラウザで動くアプリを作る（ログインなし、費用0円）",you:"見て、直してほしい所を言う",me:"作って、動作を確かめる",gate:"姉のiPhoneで動く"},
+ {no:"02",name:"家族に使ってもらう",s:D(11,24),e:D(12,7),min:14,c:"--c2",
+  todo:"姉に2週間使ってもらう",you:"様子を見る（聞き取りはしない）",me:"直す",gate:"2週間、頼まれずに使い続けた"},
+ {no:"03",name:"知らない人に出す",s:D(12,8),e:D(1,11),min:21,c:"--c3",
+  todo:"Xで界隈の人に届ける",you:"投稿する",me:"届け方を設計し、使われた数を測る",gate:"30人以上が使い、10人以上が3日後も使う"},
+ {no:"04",name:"お金を試す",s:D(1,12),e:D(2,15),min:21,c:"--c4",
+  todo:"小さな有料機能を1つ置く（03を満たした場合だけ）",you:"決める",me:"設計する",gate:"1人でも払う"},
+ {no:"05",name:"振り返り・就活用にまとめる",s:D(2,16),e:D(3,31),min:7,c:"--c5",
+  todo:"当たり外れをまとめ、ES・面接で話せる形にする",you:"一緒に振り返る",me:"まとめる",gate:"期限"}
+];
+const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function draw(){
+ const svg=document.getElementById('g'); svg.innerHTML='';
+ const L=176,R=880,T=40,rowH=48, W=R-L;
+ const x=d=>L+W*day(d)/TOTAL;
+ const NS="http://www.w3.org/2000/svg";
+ const el=(t,a,txt)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);if(txt!=null)n.textContent=txt;svg.appendChild(n);return n};
+ const muted=css('--muted'),grid=css('--grid'),fg=css('--fg'),line=css('--line');
+ // month grid
+ [D(12,1),D(1,1),D(2,1),D(3,1)].forEach(m=>{el('line',{x1:x(m),x2:x(m),y1:T-8,y2:T+rowH*5+4,stroke:grid,'stroke-width':1})});
+ [[D(11,14),"11月"],[D(12,1),"12月"],[D(1,1),"1月"],[D(2,1),"2月"],[D(3,1),"3月"]].forEach(([m,t])=>{
+   el('text',{x:x(m)+4,y:T-16,fill:muted,'font-size':12,'font-family':css('--f-body')},t)});
+ el('text',{x:x(D(1,1))+4,y:T-30,fill:muted,'font-size':11,'font-family':css('--f-mono')},"2027");
+ // hatch pattern
+ const defs=document.createElementNS(NS,'defs');svg.appendChild(defs);
+ stages.forEach((s,i)=>{
+   const p=document.createElementNS(NS,'pattern');p.setAttribute('id','h'+i);p.setAttribute('width',6);p.setAttribute('height',6);p.setAttribute('patternUnits','userSpaceOnUse');p.setAttribute('patternTransform','rotate(45)');
+   const r=document.createElementNS(NS,'rect');r.setAttribute('width',3);r.setAttribute('height',6);r.setAttribute('fill',css(s.c));r.setAttribute('opacity','.55');p.appendChild(r);defs.appendChild(p);
+ });
+ stages.forEach((s,i)=>{
+   const y=T+i*rowH+8, h=22;
+   el('text',{x:12,y:y+16,fill:css(s.c),'font-size':12,'font-family':css('--f-mono')},s.no);
+   el('text',{x:36,y:y+16,fill:fg,'font-size':13,'font-weight':700,'font-family':css('--f-body')},s.name.length>11?s.name.slice(0,10)+"…":s.name);
+   const x0=x(s.s), x1=x(new Date(s.e.getTime()+864e5)), xm=Math.min(x1,x0+W*s.min/TOTAL);
+   el('rect',{x:x0,y,width:Math.max(2,x1-x0),height:h,rx:5,fill:`url(#h${i})`,stroke:css(s.c),'stroke-width':1});
+   el('rect',{x:x0,y,width:Math.max(3,xm-x0),height:h,rx:5,fill:css(s.c)});
+   // gate diamond
+   const gx=x1,gy=y+h/2;
+   el('rect',{x:gx-6,y:gy-6,width:12,height:12,fill:i===4?css('--goal'):fg,transform:`rotate(45 ${gx} ${gy})`});
+   const lab=`${fmt(s.s)}–${fmt(s.e)}`;
+   const tx=gx+12, anchorEnd=tx>R-90;
+   el('text',{x:anchorEnd?x0-6:tx,y:y+16,fill:muted,'font-size':11.5,'font-family':css('--f-mono'),'text-anchor':anchorEnd?'end':'start'},lab);
+ });
+ // today
+ const tx=x(START);
+ const tl=el('line',{x1:tx,x2:tx,y1:T-8,y2:T+rowH*5+4,stroke:css('--today'),'stroke-width':2,'stroke-dasharray':'4 3',class:'today-line'});
+ el('text',{x:tx+4,y:T+rowH*5+22,fill:fg,'font-size':12,'font-weight':700,'font-family':css('--f-body')},"今日 11/14");
+ const gx=x(new Date(END.getTime()+864e5));
+ el('text',{x:gx,y:T+rowH*5+22,fill:css('--goal'),'font-size':12,'font-weight':700,'text-anchor':'end','font-family':css('--f-body')},"期限 3/31");
+ // slack summary
+ const slack=stages.reduce((a,s)=>a+day(new Date(s.e.getTime()+864e5))-day(s.s)-s.min,0);
+ el('text',{x:L,y:T+rowH*5+44,fill:muted,'font-size':12,'font-family':css('--f-body')},`余裕の合計 約${slack}日（1回やり直しても期限に間に合う）`);
+}
+function cards(){
+ const box=document.getElementById('cards');
+ box.innerHTML=stages.map(s=>{
+   const len=day(new Date(s.e.getTime()+864e5))-day(s.s), slack=len-s.min;
+   return `<article class="card" style="--sc:var(${s.c})">
+     <span class="no">STAGE ${s.no}</span><h3>${s.name}</h3>
+     <span class="when">${fmt(s.s)} 〜 ${fmt(s.e)}（${len}日・余裕${slack}日）</span>
+     <dl><dt>やること</dt><dd>${s.todo}</dd><dt>あなた</dt><dd>${s.you}</dd><dt>Claude</dt><dd>${s.me}</dd><dt>進む条件</dt><dd>${s.gate}</dd></dl>
+   </article>`}).join('');
+}
+cards(); draw();
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw)}catch(e){}
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>
