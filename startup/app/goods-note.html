@@ -1,0 +1,334 @@
+<title>グッズ交換ノート</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700;900&display=swap">
+<style>
+/* Layout: スマホ1画面のアプリ。上に見出し、下にタブ。交換の約束を一番手前に置く */
+:root{
+  --bg:#f6f5fa; --surface:#ffffff; --fg:#24222c; --muted:#6c6879; --line:#dfdbe8; --soft:#efedf5;
+  --accent:#d9467f; --accent-fg:#ffffff; --give:#2f8fd0; --want:#e08a1e; --ok:#2f9a68; --late:#d23b3b;
+  --f-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#16151b; --surface:#211f28; --fg:#edecf3; --muted:#a6a2b5; --line:#383545; --soft:#2a2833;
+  --accent:#ff6aa1; --accent-fg:#1a1018; --give:#5ab4ee; --want:#ffad4d; --ok:#5cc794; --late:#ff6b6b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16151b; --surface:#211f28; --fg:#edecf3; --muted:#a6a2b5; --line:#383545; --soft:#2a2833;
+  --accent:#ff6aa1; --accent-fg:#1a1018; --give:#5ab4ee; --want:#ffad4d; --ok:#5cc794; --late:#ff6b6b; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0}
+.app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px calc(88px + env(safe-area-inset-bottom,0px))}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+h1{font-family:var(--f-display);font-weight:900;font-size:22px;margin:0}
+h2{font-family:var(--f-display);font-size:17px;margin:18px 0 8px}
+.banner{background:var(--soft);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
+button.small{padding:4px 10px;font-size:13px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.row .body{flex:1;min-width:0}
+.row .title{font-weight:700;overflow-wrap:anywhere}
+.row .sub{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--soft);flex:none;display:grid;place-items:center;color:var(--muted);font-size:11px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-size:12px;border-radius:999px;padding:1px 8px;border:1px solid var(--line);color:var(--muted)}
+.chip.give{color:var(--give);border-color:var(--give)}
+.chip.want{color:var(--want);border-color:var(--want)}
+.chip.late{color:#fff;background:var(--late);border-color:var(--late)}
+.chip.ok{color:var(--ok);border-color:var(--ok)}
+.chip.sample{border-style:dashed}
+.deal{border-left:5px solid var(--line)}
+.deal.late{border-left-color:var(--late)}
+.deal.wait{border-left-color:var(--want)}
+.deal.done{opacity:.6}
+.steps{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.step{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.step.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.search{display:flex;gap:8px;margin-bottom:10px}
+.search input{flex:1;min-width:0}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+textarea{min-height:80px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.inline{flex-direction:row;align-items:center;gap:8px;color:var(--fg);font-size:15px}
+label.inline input{width:auto}
+.empty{color:var(--muted);font-size:14px;padding:16px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+.hit{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+.hit b{color:var(--accent)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:5}
+nav.tabs .in{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:100%;max-width:560px}
+nav.tabs button{border:none;background:none;font-size:12px;padding:6px 2px;border-radius:8px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button .ic{font-family:var(--f-display);font-size:18px;line-height:1}
+nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--soft);font-weight:700}
+dialog{border:none;border-radius:16px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 40px);background:var(--surface);color:var(--fg)}
+dialog::backdrop{background:rgba(20,18,28,.45)}
+dialog form{display:flex;flex-direction:column;gap:12px;padding:18px}
+dialog h3{margin:0;font-family:var(--f-display)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.actions .left{margin-right:auto}
+.preview-photo{width:96px;height:96px;border-radius:10px;object-fit:cover;background:var(--soft)}
+.poster{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--soft)}
+.note{font-size:13px;color:var(--muted)}
+.stat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.stat div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px}
+.stat b{font-size:18px;font-variant-numeric:tabular-nums}
+@media (max-width:380px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="app">
+  <header>
+    <h1>グッズ交換ノート</h1>
+    <button id="addBtn" class="primary" type="button">＋ 追加</button>
+  </header>
+  <div id="sampleBanner" class="banner" hidden>
+    <span>いま表示しているのは見本です。</span>
+    <button id="clearSample" class="small" type="button">見本を消してはじめる</button>
+  </div>
+  <main id="view"></main>
+</div>
+
+<nav class="tabs" aria-label="画面の切り替え"><div class="in">
+  <button type="button" data-tab="deals"><span class="ic">⇄</span>交換</button>
+  <button type="button" data-tab="items"><span class="ic">▣</span>持ち物</button>
+  <button type="button" data-tab="wants"><span class="ic">♡</span>求</button>
+  <button type="button" data-tab="poster"><span class="ic">▤</span>募集画像</button>
+  <button type="button" data-tab="backup"><span class="ic">⛁</span>保存</button>
+</div></nav>
+
+<dialog id="dlg"><form id="dlgForm" method="dialog"></form></dialog>
+
+<script>
+(()=>{
+/* ---------- 保存（端末の中だけ。IndexedDB、だめなら localStorage） ---------- */
+const DBN='goods-note',KEY='state';
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open(DBN,1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+async function load(){
+  try{const db=await idb();return await new Promise(res=>{const q=db.transaction('kv').objectStore('kv').get(KEY);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}
+  catch(e){try{return JSON.parse(localStorage.getItem(DBN)||'null')}catch(_){return null}}
+}
+async function save(){
+  const data=JSON.parse(JSON.stringify(S));
+  try{const db=await idb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(data,KEY);t.oncomplete=res;t.onerror=res})}
+  catch(e){try{localStorage.setItem(DBN,JSON.stringify(data))}catch(_){}}
+}
+
+/* ---------- データ ---------- */
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addDays=n=>{const d=today();d.setDate(d.getDate()+n);return iso(d)};
+function sample(){
+  return {sample:true,handle:'@example',terms:'同種交換・郵送（定形郵便）優先',
+  items:[
+    {id:uid(),name:'缶バッジ 第2弾',work:'見本アニメ',chara:'キャラA',qty:2,give:true,photo:'',sample:true},
+    {id:uid(),name:'アクリルスタンド',work:'見本アニメ',chara:'キャラB',qty:1,give:true,photo:'',sample:true},
+    {id:uid(),name:'ブロマイド くじB賞',work:'見本アニメ',chara:'キャラA',qty:1,give:false,photo:'',sample:true}],
+  wants:[
+    {id:uid(),name:'缶バッジ 第2弾',work:'見本アニメ',chara:'キャラC',note:'1つ',photo:'',sample:true},
+    {id:uid(),name:'アクリルキーホルダー',work:'見本アニメ',chara:'キャラC',note:'',photo:'',sample:true}],
+  deals:[
+    {id:uid(),partner:'@sample_friend',give:'缶バッジ 第2弾 キャラA',get:'缶バッジ 第2弾 キャラC',method:'郵送',shipBy:addDays(-1),sent:false,received:false,note:'くじの発送待ち',cancel:false,sample:true},
+    {id:uid(),partner:'@sample_mutual',give:'アクリルスタンド キャラB',get:'アクリルキーホルダー キャラC',method:'手渡し',shipBy:addDays(5),sent:true,received:false,note:'イベント会場で',cancel:false,sample:true}]};
+}
+let S={items:[],wants:[],deals:[],handle:'',terms:''};
+let tab='deals', q='';
+
+/* ---------- 写真を小さくする ---------- */
+function shrink(file,max=420){return new Promise((res)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.72))};im.onerror=()=>res('');im.src=fr.result};fr.onerror=()=>res('');fr.readAsDataURL(file)})}
+
+/* ---------- 表示 ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>{if(!s)return'';const [y,m,d]=s.split('-');return `${+m}/${+d}`};
+const thumb=p=>p?`<img class="thumb" src="${p}" alt="">`:`<div class="thumb">写真なし</div>`;
+const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');
+function dealState(d){
+  if(d.cancel)return{cls:'done',label:'取り消し'};
+  if(d.sent&&d.received)return{cls:'done',label:'完了'};
+  if(!d.sent&&d.shipBy&&new Date(d.shipBy)<today())return{cls:'late',label:'発送の期限を過ぎています'};
+  if(d.sent&&!d.received)return{cls:'wait',label:'相手からの到着待ち'};
+  return{cls:'',label:d.shipBy?`${fmt(d.shipBy)}までに${d.method==='手渡し'?'渡す':'発送'}`:'約束中'};
+}
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
+  $('#sampleBanner').hidden=!S.sample;
+  $('#addBtn').hidden=(tab==='poster'||tab==='backup');
+  const v=$('#view');
+  if(tab==='deals')v.innerHTML=viewDeals();
+  if(tab==='items')v.innerHTML=viewItems();
+  if(tab==='wants')v.innerHTML=viewWants();
+  if(tab==='poster'){v.innerHTML=viewPoster();drawPoster()}
+  if(tab==='backup')v.innerHTML=viewBackup();
+}
+function viewDeals(){
+  const open=S.deals.filter(d=>!d.cancel&&!(d.sent&&d.received));
+  const closed=S.deals.filter(d=>d.cancel||(d.sent&&d.received));
+  const late=open.filter(d=>dealState(d).cls==='late').length;
+  const card=d=>{const st=dealState(d);return `<div class="row deal ${st.cls}">
+    <div class="body">
+      <div class="title">${esc(d.partner||'相手未入力')} さん</div>
+      <div class="sub">出す：${esc(d.give)}<br>もらう：${esc(d.get)}</div>
+      <div class="chips"><span class="chip ${st.cls==='late'?'late':st.cls==='done'?'ok':''}">${esc(st.label)}</span><span class="chip">${esc(d.method)}</span>${d.sample?'<span class="chip sample">見本</span>':''}</div>
+      ${d.note?`<div class="sub" style="margin-top:4px">メモ：${esc(d.note)}</div>`:''}
+      ${d.cancel?'':`<div class="steps">
+        <button type="button" class="step ${d.sent?'on':''}" data-act="sent" data-id="${d.id}">${d.method==='手渡し'?'渡した':'送った'}</button>
+        <button type="button" class="step ${d.received?'on':''}" data-act="recv" data-id="${d.id}">受け取った</button>
+      </div>`}
+    </div>
+    <button type="button" class="small" data-act="editDeal" data-id="${d.id}">編集</button></div>`};
+  return `<div class="stat"><div>進行中 <b>${open.length}</b></div><div>期限切れ <b style="color:var(--late)">${late}</b></div></div>
+    <h2>進行中の交換</h2>
+    ${open.length?`<div class="list">${open.sort((a,b)=>(a.shipBy||'9').localeCompare(b.shipBy||'9')).map(card).join('')}</div>`:`<div class="empty">進行中の交換はありません。「＋ 追加」で約束を記録できます。</div>`}
+    ${closed.length?`<h2>終わった交換</h2><div class="list">${closed.map(card).join('')}</div>`:''}`;
+}
+function viewItems(){
+  const hits=q?S.items.filter(i=>norm(i.name+i.work+i.chara).includes(norm(q))):null;
+  const list=hits??S.items;
+  const total=S.items.reduce((a,i)=>a+(+i.qty||0),0);
+  const card=i=>`<div class="row">${thumb(i.photo)}<div class="body"><div class="title">${esc(i.name)}</div>
+    <div class="sub">${esc([i.work,i.chara].filter(Boolean).join(' / '))}</div>
+    <div class="chips"><span class="chip">${+i.qty||0}個</span>${i.give?'<span class="chip give">譲</span>':''}${i.sample?'<span class="chip sample">見本</span>':''}</div></div>
+    <button type="button" class="small" data-act="editItem" data-id="${i.id}">編集</button></div>`;
+  return `<div class="search"><input id="q" type="search" placeholder="これ持ってる？（名前・作品・キャラで探す）" value="${esc(q)}" aria-label="持ち物を探す"></div>
+    ${q?`<div class="hit">${hits.length?`<b>持っています</b>：${hits.length}件（合計 ${hits.reduce((a,i)=>a+(+i.qty||0),0)}個）`:'<b>見つかりません</b>。まだ持っていない可能性があります。'}</div>`:`<div class="stat"><div>種類 <b>${S.items.length}</b></div><div>合計 <b>${total}</b>個</div><div>譲に出している <b>${S.items.filter(i=>i.give).length}</b></div></div>`}
+    ${list.length?`<div class="list">${list.map(card).join('')}</div>`:(q?'':`<div class="empty">持ち物はまだありません。「＋ 追加」で登録できます。</div>`)}`;
+}
+function viewWants(){
+  const card=w=>{const have=S.items.some(i=>norm(i.name)===norm(w.name)&&norm(i.chara)===norm(w.chara));return `<div class="row">${thumb(w.photo)}<div class="body"><div class="title">${esc(w.name)}</div>
+    <div class="sub">${esc([w.work,w.chara].filter(Boolean).join(' / '))}${w.note?`・${esc(w.note)}`:''}</div>
+    <div class="chips"><span class="chip want">求</span>${have?'<span class="chip ok">持ち物にも同じものがあります</span>':''}${w.sample?'<span class="chip sample">見本</span>':''}</div></div>
+    <button type="button" class="small" data-act="editWant" data-id="${w.id}">編集</button></div>`};
+  return `<h2>欲しいもの（求）</h2>${S.wants.length?`<div class="list">${S.wants.map(card).join('')}</div>`:`<div class="empty">欲しいものはまだありません。「＋ 追加」で登録できます。</div>`}`;
+}
+function viewPoster(){
+  return `<h2>Xに貼る募集画像</h2>
+    <p class="note">持ち物で「譲」にしたものと、求のものから作ります。下の画像を長押しすると、写真に保存できます。</p>
+    <div class="two" style="margin:10px 0">
+      <label>アカウント名<input id="handle" value="${esc(S.handle)}" placeholder="@yourname"></label>
+      <label>交換の条件<input id="terms" value="${esc(S.terms)}" placeholder="例：同種交換・郵送優先"></label>
+    </div>
+    <img id="posterImg" class="poster" alt="募集画像のプレビュー">`;
+}
+function viewBackup(){
+  return `<h2>データの保存</h2>
+    <p class="note">データはこの端末の中だけにあります。機種変更やブラウザのデータ削除で消えるので、ときどき書き出して、メモなどに貼って残してください。</p>
+    <div class="actions" style="justify-content:flex-start;margin:10px 0"><button type="button" class="primary" data-act="export">書き出してコピー</button></div>
+    <textarea id="backupText" aria-label="書き出したデータ" readonly placeholder="ここに書き出したデータが出ます"></textarea>
+    <h2>読み込み</h2>
+    <p class="note">前に書き出した文字を貼り付けて、読み込みます。今のデータは置き換わります。</p>
+    <textarea id="importText" aria-label="読み込むデータ" placeholder="ここに貼り付け"></textarea>
+    <div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" data-act="import">読み込む</button></div>
+    <p id="backupMsg" class="note" role="status"></p>`;
+}
+
+/* ---------- 募集画像（1080×1350） ---------- */
+function loadImg(src){return new Promise(r=>{if(!src)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src})}
+async function drawPoster(){
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const font=f=>`${f}px "Zen Kaku Gothic New","Hiragino Sans",sans-serif`;
+  g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
+  g.fillStyle='#24222c';g.font=`900 ${60}px "Zen Maru Gothic","Hiragino Sans",sans-serif`;g.fillText('交換募集',60,110);
+  g.font=font(30);g.fillStyle='#6c6879';g.fillText(S.handle||'',60,160);
+  const gives=S.items.filter(i=>i.give), wants=S.wants;
+  async function block(title,color,arr,y0,y1){
+    g.fillStyle=color;g.beginPath();g.roundRect(60,y0,120,56,28);g.fill();g.fillStyle='#fff';g.font=`700 ${32}px "Zen Kaku Gothic New",sans-serif`;g.fillText(title,92,y0+40);
+    const cols=4,cw=(W-120-3*24)/cols,ch=cw+70;let y=y0+80;
+    for(let k=0;k<Math.min(arr.length,8);k++){
+      const it=arr[k],x=60+(k%cols)*(cw+24),yy=y+Math.floor(k/cols)*ch;
+      if(yy+ch>y1)break;
+      g.fillStyle='#f1eff6';g.beginPath();g.roundRect(x,yy,cw,cw,18);g.fill();
+      const im=await loadImg(it.photo);
+      if(im){g.save();g.beginPath();g.roundRect(x,yy,cw,cw,18);g.clip();const s=Math.max(cw/im.width,cw/im.height);g.drawImage(im,x+(cw-im.width*s)/2,yy+(cw-im.height*s)/2,im.width*s,im.height*s);g.restore()}
+      else{g.fillStyle='#a6a2b5';g.font=font(24);g.fillText('写真なし',x+cw/2-48,yy+cw/2+8)}
+      g.fillStyle='#24222c';g.font=`700 ${24}px "Zen Kaku Gothic New",sans-serif`;
+      const t=(it.chara?it.chara+' ':'')+it.name;g.fillText(t.length>11?t.slice(0,10)+'…':t,x+4,yy+cw+34);
+    }
+    if(!arr.length){g.fillStyle='#a6a2b5';g.font=font(28);g.fillText('（まだありません）',60,y+40)}
+    if(arr.length>8){g.fillStyle='#6c6879';g.font=font(24);g.fillText(`ほか ${arr.length-8} 件`,W-220,y0+40)}
+  }
+  await block('譲','#2f8fd0',gives,200,720);
+  await block('求','#e08a1e',wants,740,1240);
+  g.fillStyle='#24222c';g.font=font(28);g.fillText(S.terms||'',60,1300);
+  const img=$('#posterImg');if(img)img.src=c.toDataURL('image/png');
+}
+
+/* ---------- 入力の画面 ---------- */
+const dlg=$('#dlg'),form=$('#dlgForm');
+let pendingPhoto=null;
+function open(html,onSave,onDelete){
+  form.innerHTML=html+`<div class="actions">${onDelete?'<button type="button" class="left" id="delBtn">削除</button>':''}<button type="button" id="cancelBtn">やめる</button><button type="submit" class="primary">保存</button></div>`;
+  pendingPhoto=null;
+  form.onsubmit=async e=>{e.preventDefault();await onSave(new FormData(form));dlg.close();await save();render()};
+  $('#cancelBtn').onclick=()=>dlg.close();
+  if(onDelete){let armed=false;$('#delBtn').onclick=async e=>{if(!armed){armed=true;e.target.textContent='本当に削除する';return}onDelete();dlg.close();await save();render()}}
+  const ph=form.querySelector('input[type=file]');
+  if(ph)ph.onchange=async()=>{if(ph.files[0]){pendingPhoto=await shrink(ph.files[0]);const pv=form.querySelector('.preview-photo');if(pv)pv.src=pendingPhoto}};
+  dlg.showModal();
+}
+function leaveSample(){if(S.sample){S={items:[],wants:[],deals:[],handle:'',terms:''}}}
+function editDeal(d){
+  const isNew=!d;d=d||{method:'郵送',sent:false,received:false};
+  open(`<h3>${isNew?'交換の約束を記録':'交換の約束を編集'}</h3>
+    <label>相手（Xのアカウント名など）<input name="partner" id="f-partner" required value="${esc(d.partner)}" placeholder="@partner"></label>
+    <label>自分が出すもの<input name="give" id="f-give" required value="${esc(d.give)}"></label>
+    <label>相手からもらうもの<input name="get" id="f-get" required value="${esc(d.get)}"></label>
+    <div class="two"><label>方法<select name="method" id="f-method"><option ${d.method==='郵送'?'selected':''}>郵送</option><option ${d.method==='手渡し'?'selected':''}>手渡し</option></select></label>
+    <label>発送・手渡しの期限<input type="date" name="shipBy" id="f-shipBy" value="${esc(d.shipBy||'')}"></label></div>
+    <label>メモ<input name="note" id="f-note" value="${esc(d.note)}" placeholder="例：くじの発送待ち"></label>
+    ${isNew?'':`<label class="inline"><input type="checkbox" name="cancel" id="f-cancel" ${d.cancel?'checked':''}>この交換は取り消しになった</label>`}`,
+    fd=>{if(isNew){leaveSample();d.id=uid();S.deals.push(d)}Object.assign(d,{partner:fd.get('partner'),give:fd.get('give'),get:fd.get('get'),method:fd.get('method'),shipBy:fd.get('shipBy'),note:fd.get('note'),cancel:!!fd.get('cancel'),sample:false})},
+    isNew?null:()=>{S.deals=S.deals.filter(x=>x!==d)});
+}
+function editItem(i){
+  const isNew=!i;i=i||{qty:1,give:false};
+  open(`<h3>${isNew?'持ち物を登録':'持ち物を編集'}</h3>
+    <div style="display:flex;gap:12px;align-items:center"><img class="preview-photo" alt="" src="${i.photo||''}"><label style="flex:1">写真（任意）<input type="file" accept="image/*" id="f-photo"></label></div>
+    <label>名前<input name="name" id="f-name" required value="${esc(i.name)}" placeholder="例：缶バッジ 第2弾"></label>
+    <div class="two"><label>作品<input name="work" id="f-work" value="${esc(i.work)}"></label><label>キャラ<input name="chara" id="f-chara" value="${esc(i.chara)}"></label></div>
+    <div class="two"><label>個数<input type="number" min="0" name="qty" id="f-qty" value="${esc(i.qty)}"></label>
+    <label class="inline" style="align-self:end"><input type="checkbox" name="give" id="f-give2" ${i.give?'checked':''}>譲に出す</label></div>`,
+    fd=>{if(isNew){leaveSample();i.id=uid();S.items.push(i)}Object.assign(i,{name:fd.get('name'),work:fd.get('work'),chara:fd.get('chara'),qty:+fd.get('qty')||0,give:!!fd.get('give'),sample:false});if(pendingPhoto)i.photo=pendingPhoto},
+    isNew?null:()=>{S.items=S.items.filter(x=>x!==i)});
+}
+function editWant(w){
+  const isNew=!w;w=w||{};
+  open(`<h3>${isNew?'欲しいものを登録':'欲しいものを編集'}</h3>
+    <div style="display:flex;gap:12px;align-items:center"><img class="preview-photo" alt="" src="${w.photo||''}"><label style="flex:1">写真（任意）<input type="file" accept="image/*" id="f-wphoto"></label></div>
+    <label>名前<input name="name" id="f-wname" required value="${esc(w.name)}"></label>
+    <div class="two"><label>作品<input name="work" id="f-wwork" value="${esc(w.work)}"></label><label>キャラ<input name="chara" id="f-wchara" value="${esc(w.chara)}"></label></div>
+    <label>メモ<input name="note" id="f-wnote" value="${esc(w.note)}" placeholder="例：1つ"></label>`,
+    fd=>{if(isNew){leaveSample();w.id=uid();S.wants.push(w)}Object.assign(w,{name:fd.get('name'),work:fd.get('work'),chara:fd.get('chara'),note:fd.get('note'),sample:false});if(pendingPhoto)w.photo=pendingPhoto},
+    isNew?null:()=>{S.wants=S.wants.filter(x=>x!==w)});
+}
+
+/* ---------- 操作 ---------- */
+document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;q='';render();window.scrollTo(0,0)});
+$('#addBtn').onclick=()=>{({deals:()=>editDeal(),items:()=>editItem(),wants:()=>editWant()})[tab]?.()};
+$('#clearSample').onclick=async()=>{S={items:[],wants:[],deals:[],handle:'',terms:''};await save();render()};
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,a=b.dataset.act;
+  if(a==='sent'||a==='recv'){const d=S.deals.find(x=>x.id===id);if(!d)return;if(a==='sent')d.sent=!d.sent;else d.received=!d.received;await save();render()}
+  if(a==='editDeal')editDeal(S.deals.find(x=>x.id===id));
+  if(a==='editItem')editItem(S.items.find(x=>x.id===id));
+  if(a==='editWant')editWant(S.wants.find(x=>x.id===id));
+  if(a==='export'){const t=JSON.stringify({app:'goods-note',v:1,at:new Date().toISOString(),data:S});const ta=$('#backupText');ta.value=t;
+    try{await navigator.clipboard.writeText(t);$('#backupMsg').textContent='コピーしました。メモなどに貼って残してください。'}catch(_){ta.focus();ta.select();$('#backupMsg').textContent='下の文字を選んでコピーしてください。'}}
+  if(a==='import'){try{const o=JSON.parse($('#importText').value);if(!o||o.app!=='goods-note'||!o.data)throw 0;S=Object.assign({items:[],wants:[],deals:[],handle:'',terms:''},o.data);await save();$('#importText').value='';render();$('#backupMsg').textContent='読み込みました。'}
+    catch(_){$('#backupMsg').textContent='読み込めませんでした。書き出したときの文字を、そのまま全部貼り付けてください。'}}
+});
+document.addEventListener('input',async e=>{
+  if(e.target.id==='q'){q=e.target.value;const pos=e.target.selectionStart;render();const el=$('#q');el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}
+  if(e.target.id==='handle'||e.target.id==='terms'){S[e.target.id]=e.target.value;clearTimeout(window.__pt);window.__pt=setTimeout(async()=>{await save();drawPoster()},300)}
+});
+
+/* ---------- 起動 ---------- */
+(async()=>{const d=await load();S=d&&Array.isArray(d.items)?d:sample();render()})();
+})();
+</script>
