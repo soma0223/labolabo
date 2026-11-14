@@ -252,7 +252,8 @@ function vHome(){
 
 /* ---------- 準備 ---------- */
 /* ---------- 音程 ---------- */
-function vPitch(){
+function vPitch(){ var r=vPitch0(); return (S.range&&!R)?r+vAsk('pitch',pCtx,'p'):r; }
+function vPitch0(){
   var h=micNote();
   if(!S.range||R) return h+vRange();
   var p=PAT[S.pattern];
@@ -717,7 +718,8 @@ function firstGo(){
     });
   });
 }
-function vFirst(){
+function vFirst(){ return vFirst0()+vAsk('first',fCtx,'f'); }
+function vFirst0(){
   var h=micNote()+'<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">一声目の練習'+(F.reps.length&&F.phase!=='sum'?' ・ '+F.reps.length+' / 5':'')+'</span><button class="btn line" style="padding:4px 10px" data-act="firstQuit">やめる</button></div>';
   if(F.phase==='set'){
     h+='<h2>歌い出しの音を決める</h2><p>練習したい曲の、<b>歌い出しの最初の音</b>だけを「あー」で3秒伸ばします。この音が、毎回のイントロ代わりに鳴ります。</p>'+(F.msg?'<div class="warnbox">'+F.msg+'</div>':'')+
@@ -903,7 +905,8 @@ function vBase(){
     h+='<details><summary>'+c[1]+'（'+ds.length+'）</summary><div class="steps">'+ds.map(function(x){var r=drec(x.id);return '<div class="step"><div class="t"><b>'+x.n+'</b><small>'+x.src+'</small></div><span class="tag '+(r.log.length?'mid':'weak')+'">段階'+Math.min(r.lv,x.lv.length)+'/'+x.lv.length+'</span><button class="btn line" data-act="dOpen" data-v="'+x.id+'">開く</button></div>';}).join('')+'</div></details>'; });
   return h+'</section>';
 }
-function vDrill(){
+function vDrill(){ return vDrill0()+vAsk('d:'+D.id+':'+D.lv,dCtx,'d'); }
+function vDrill0(){
   var x=DRI[D.id], r=drec(D.id), L=x.lv[D.lv-1], h='<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">'+CAT.filter(function(c){return c[0]===x.c;})[0][1]+(D.menu?' ・ メニュー '+(menu().indexOf(D.id)+1)+' / '+menu().length:'')+'</span><button class="btn line" style="padding:4px 10px" data-act="dQuit">一覧へ</button></div><h2>'+x.n+'</h2>';
   if(D.phase==='intro'){
     if(x.lv.length>1) h+='<div class="row">'+x.lv.map(function(_,i){var op=i+1<=r.lv;return '<button class="btn line'+(D.lv===i+1?' on':'')+'" '+(op?'data-act="dLv" data-v="'+(i+1)+'"':'disabled style="opacity:.45"')+'>段階'+(i+1)+(op?'':'（未）')+'</button>';}).join('')+'</div>';
@@ -1507,6 +1510,11 @@ var ACT={
   firstSum:function(){if(!S.firsts)S.firsts=[];S.firsts.push({d:today(),ok:F.reps.filter(function(r){return r.all;}).length});save();F.phase='sum';render();window.scrollTo(0,0);},
   firstAgain:function(){F={phase:'ready',reps:[]};render();},
   firstQuit:function(){stopAll();F=null;render();},
+  qQuick:function(d){var q=QUICK[+d.v]; if(AI){ask(q);return;} QA={q:q,a:faq(q,d.k)}; var y=window.scrollY; render(); window.scrollTo(0,y);},
+  qCopy:function(){var q=document.getElementById('q'),t=(q?q.value.trim():'')||'（質問をここに書いてください）'; QA.draft=q?q.value:''; var txt='歌の練習アプリ「うたラボ」で練習中です。質問：'+t+'\n\n'+(ASKCTX?ASKCTX():'')+'\n\n'+ctxText();
+    var done=function(){CH.err='コピーしました。Claudeとの会話に貼り付けてください。';render();};
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,function(){var el=document.getElementById('sum'); if(el){el.hidden=false;el.value=txt;el.select();} CH.err='自動でコピーできませんでした。表示された文面を選んでコピーしてください。';});
+    else { var el=document.getElementById('sum'); if(el){el.hidden=false;el.value=txt;el.select();} }},
   tipProb:function(d){TP=d.v;render();},
   tipOpen:function(d){stopAll();TP=d.v;L=null;RV=null;tab='learn';render();var el=document.querySelector('[data-act=tipRate][data-v='+d.t+']');if(el){var dt=el.closest('details');if(dt){dt.open=true;dt.scrollIntoView({block:'start'});}}else window.scrollTo(0,0);},
   tipRate:function(d){if(!S.tips)S.tips={};S.tips[d.v]={r:+d.r,d:today()};save();var y=window.scrollY;render();window.scrollTo(0,y);},
@@ -1525,6 +1533,49 @@ document.addEventListener('click',function(e){
   var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; if(L) L.run=null; if(D&&D.phase==='run'){D.phase='intro';D.E=null;} if(F&&F.phase!=='sum'&&F.phase!=='res'&&F.phase!=='ready') F.phase=S.firstT&&F.reps.length?'ready':'set'; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
   var a=e.target.closest('[data-act]'); if(a&&ACT[a.dataset.act]) ACT[a.dataset.act](a.dataset);
 });
+/* ---------- 練習中に質問する ----------
+   claude.ai のページでは Claude に直接聞く。それ以外（ホーム画面の版など）では、よくある質問にその場で答え、Claude に貼る文面を用意する */
+var ASKCTX=null;
+var CAT2TIP={body:'health',breath:'steady',close:'breathy',sovt:'high',reg:'high',res:'dark',art:'rhythm',ear:'pitch',rhy:'rhythm',cool:'health'};
+function strip(h){ return String(h||'').replace(/<br>/g,'\n').replace(/<[^>]+>/g,''); }
+function dCtx(){
+  if(!D) return '';
+  var x=DRI[D.id], L=x.lv[D.lv-1], ck=x.chk.map(function(c,i){return c+'：'+(D.ck&&D.ck[i]===1?'できた':D.ck&&D.ck[i]===0?'まだ':'未記入');});
+  return '【いま練習中の基礎練習】'+x.n+'（'+CAT.filter(function(c){return c[0]===x.c;})[0][1]+'、段階'+D.lv+'/'+x.lv.length+'）\n'+
+    'やり方：'+(L.sc?MODE[L.sc.mode]+'。'+L.sc.v+'で、お手本の音階が半音ずつ上がる':L.t)+'\n何のため：'+x.why+'\nなぜ効くか：'+(x.how||'')+'\nやりすぎると：'+(x.over||'')+'\n出どころ：'+x.src+
+    (ck.length?'\n確かめ項目：'+ck.join('／'):'')+(D.msg?'\n今回の測定結果：'+strip(D.msg):'');
+}
+function fCtx(){ if(!F) return ''; var r=F.reps||[]; return '【いま練習中】一声目の練習（歌い出しの2秒を5回。出だし・音程・芯・響きの4つを判定）。歌い出しの音：'+(S.firstT?nname(S.firstT):'未設定')+'。ここまで'+r.length+'回：'+r.map(function(x){return Object.keys(FL).map(function(k){return FL[k]+(x.ck[k]?'○':'×');}).join('');}).join(' / '); }
+function pCtx(){ return '【いま練習中】音程の練習（お手本の音を聞いて同じ高さで歌う。表示の段階'+S.stage+'：'+STAGE[S.stage][0]+'、音の数：'+PAT[S.pattern].name+'）'+(T&&T.res&&T.res.heard?'。直前の結果：出だし'+sgn(T.res.onset)+'セント、伸ばしている間'+sgn(T.res.sustain)+'セント、ぶれ'+Math.round(T.res.wob)+'セント':''); }
+var QUICK=['できているか分からない','喉が痛い・違和感がある','うまくできない','なぜこれをやるの？'];
+function faq(q,kind){
+  var x=kind==='d'&&D?DRI[D.id]:null, tp=x?CAT2TIP[x.c]:kind==='f'?'onset':'pitch', tips=TIPS.filter(function(t){return t.p===tp;}).slice(0,3).map(function(t){return '「'+t.n+'」';}).join('、');
+  if(q===QUICK[0]) return (x&&x.chk.length?'この練習の確かめ項目は「'+x.chk.join('」「')+'」です。1つずつ、できたかどうかを見ます。':'')+(x&&x.met||kind!=='d'?'マイクが使える開き方なら、数字でも確かめられます。':'')+'いちばん確かなのは録音です。やる前とやった後で同じフレーズを録り、聞き比べます。歌っている最中の自分の声は、骨を通っても聞こえるので、感覚だけでは判断できません。';
+  if(q===QUICK[1]) return 'すぐにやめます。'+(x&&x.over?'この練習でありがちなのは「'+x.over+'」です。':'')+'水を飲み、その日は「ストローでサイレン」を小さな声で1分だけにするか、声を休めます。痛みやかすれが2週間以上続くときは、耳鼻咽喉科で診てもらってください。';
+  if(q===QUICK[2]) return (x&&x.lv.length>1&&D.lv>1?'1つ前の段階に戻します。':'')+'音量を下げる、速さを落とす、時間を短くする、のどれかで、できる大きさまで小さくします。'+(x&&x.cue?'イメージ「'+x.cue+'」も使います。':'')+'コツ図鑑の'+tips+'も試せます。上達は、少しだけ難しいことを繰り返すときにいちばん進みます。できない日があって当然です。';
+  if(q===QUICK[3]) return x?x.why+(x.how?' '+x.how:''):kind==='f'?'一声目で上手いと感じさせる4つ（出だし・音程・芯・響き）を、毎回同時に出せるようにする練習です。人前で、考えなくても同じように入れるようにするため、毎回同じ手順を踏みます。':'聞いた音を声に変える対応づけを正確にする練習です。音程が外れる人の多くは、耳ではなく、ここがずれています。表示を減らしていくのは、表示のない本番でも合わせられるようにするためです（運動学習のガイダンス仮説）。';
+  return '';
+}
+var QA={};
+function vAsk(key,ctxFn,kind){
+  if(CH.key!==key){ CH.key=key; CH.turns=[]; CH.err=''; QA={}; }
+  ASKCTX=ctxFn;
+  var open=CH.turns.length||CH.busy||QA.q;
+  var h='<section class="sheet"><details'+(open?' open':'')+'><summary>この練習について質問する</summary><div>';
+  h+='<div class="row">'+QUICK.map(function(q,i){return '<button class="btn line" style="padding:6px 12px" data-act="qQuick" data-v="'+i+'" data-k="'+kind+'">'+q+'</button>';}).join('')+'</div>';
+  if(AI){
+    CH.turns.forEach(function(t){h+='<div class="msg'+(t.role==='user'?' me':'')+'">'+esc(t.content)+'</div>';});
+    if(CH.busy) h+='<div class="msg" id="aiout">考えています…</div><div class="row"><button class="btn line" data-act="aiStop">止める</button></div>';
+    else{ if(CH.err) h+='<div class="warnbox">'+CH.err+'</div>';
+      h+='<label class="note" for="q">自由に質問する（例：ストローがないときは？　高いところで息が続かない）</label><textarea id="q"></textarea><div class="row"><button class="btn sub" data-act="aiAsk">送る</button>'+(CH.turns.length?'<button class="btn line" data-act="aiClear">会話を消す</button>':'')+'</div>'; }
+  }else{
+    if(QA.q) h+='<div class="msg me">'+esc(QA.q)+'</div><div class="msg">'+esc(QA.a)+'</div>';
+    h+='<p class="note">この開き方では、Claudeに直接は聞けません。上のよくある質問はここで答えます。それ以外は、下の文面をコピーしてClaudeとの会話に貼ってください。いま練習している内容が一緒に伝わります。claude.ai のページで開けば、ここから直接聞けます。</p>'+
+      '<label class="note" for="q">質問を書く</label><textarea id="q">'+esc(QA.draft||'')+'</textarea><div class="row"><button class="btn sub" data-act="qCopy">質問をコピーする</button></div>'+(CH.err?'<p class="note">'+CH.err+'</p>':'')+'<textarea id="sum" hidden readonly></textarea>';
+  }
+  return h+'</div></details></section>';
+}
+
 /* Claude との連動：claude.ai のページで開いたときだけ使える。Claude は歌声そのものは聞けないので、測った数字を渡す */
 var AI=null, CH={turns:[],busy:false,err:''}, aiCtl=null;
 var RULES='あなたは、歌の練習アプリ「うたラボ」の中で、利用者の歌の上達を手伝うコーチです。\n'+
@@ -1543,6 +1594,7 @@ function ctxText(){
   return L.join('\n')||'（まだ測定はありません）';
 }
 function vChat(){
+  if(CH.key!=='main'){ CH.key='main'; CH.turns=[]; CH.err=''; } ASKCTX=null;
   var M=K&&K.M&&!K.M.short?K.M:null;
   if(!AI){
     if(!M||tab!=='sing') return '';
@@ -1563,7 +1615,7 @@ function ask(text){
   CH.turns.push({role:'user',content:text}); CH.turns=CH.turns.slice(-12); if(CH.turns[0].role!=='user') CH.turns.shift();
   CH.busy=true; CH.err=''; render(); aiCtl=new AbortController();
   var push=function(t){ if(t) CH.turns.push({role:'assistant',content:t}); else CH.turns.pop(); };
-  AI([{role:'user',content:RULES+'\n'+ctxText()}].concat(CH.turns),{cache:false,signal:aiCtl.signal,onText:function(o){var el=document.getElementById('aiout'); if(el) el.textContent=o.text;}})
+  AI([{role:'user',content:RULES+'\n'+ctxText()+(ASKCTX?'\n'+ASKCTX()+'\n【この質問について】練習の途中で聞かれています。150〜300字で、すぐ試せることを先に書きます。':'')}].concat(CH.turns),{cache:false,signal:aiCtl.signal,onText:function(o){var el=document.getElementById('aiout'); if(el) el.textContent=o.text;}})
    .then(function(r){ push(r.text); },function(e){ push(e&&e.text);
      if(e&&e.code==='not_granted'){ AI=null; }
      else if(e&&e.code==='rate_limited') CH.err='少し時間をおいてから、もう一度送ってください。';
