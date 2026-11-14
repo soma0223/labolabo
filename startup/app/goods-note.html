@@ -42,6 +42,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .chip.late{color:#fff;background:var(--late);border-color:var(--late)}
 .chip.ok{color:var(--ok);border-color:var(--ok)}
 .chip.sample{border-style:dashed}
+.pick{margin-top:-4px}
+.pick button{font-size:12px;padding:3px 10px;border-radius:999px}
+.qty{display:flex;align-items:center;gap:6px;margin-top:6px}
+.qty button{padding:0 10px;min-width:34px;font-size:16px;line-height:28px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .deal{border-left:5px solid var(--line)}
 .deal.late{border-left-color:var(--late)}
 .deal.wait{border-left-color:var(--want)}
@@ -184,7 +189,7 @@ function viewDeals(){
     <button type="button" class="small" data-act="editDeal" data-id="${d.id}">編集</button></div>`};
   return `<div class="stat"><div>進行中 <b>${open.length}</b></div><div>期限切れ <b style="color:var(--late)">${late}</b></div></div>
     <h2>進行中の交換</h2>
-    ${open.length?`<div class="list">${open.sort((a,b)=>(a.shipBy||'9').localeCompare(b.shipBy||'9')).map(card).join('')}</div>`:`<div class="empty">進行中の交換はありません。「＋ 追加」で約束を記録できます。</div>`}
+    ${open.length?`<div class="list">${open.sort((a,b)=>(a.shipBy||'9').localeCompare(b.shipBy||'9')).map(card).join('')}</div>`:`<div class="empty">進行中の交換はありません。「＋ 追加」で約束を記録できます。持ち物を登録していなくても書けます。</div>`}
     ${closed.length?`<h2>終わった交換</h2><div class="list">${closed.map(card).join('')}</div>`:''}`;
 }
 function viewItems(){
@@ -193,9 +198,12 @@ function viewItems(){
   const total=S.items.reduce((a,i)=>a+(+i.qty||0),0);
   const card=i=>`<div class="row">${thumb(i.photo)}<div class="body"><div class="title">${esc(i.name)}</div>
     <div class="sub">${esc([i.work,i.chara].filter(Boolean).join(' / '))}</div>
-    <div class="chips"><span class="chip">${+i.qty||0}個</span>${i.give?'<span class="chip give">譲</span>':''}${i.sample?'<span class="chip sample">見本</span>':''}</div></div>
+    <div class="chips">${i.give?'<span class="chip give">譲</span>':''}${i.sample?'<span class="chip sample">見本</span>':''}</div>
+    <div class="qty"><button type="button" data-act="dec" data-id="${i.id}" aria-label="1つ減らす">−</button><span>${+i.qty||0}個</span><button type="button" data-act="inc" data-id="${i.id}" aria-label="1つ増やす">＋</button></div></div>
     <button type="button" class="small" data-act="editItem" data-id="${i.id}">編集</button></div>`;
-  return `<div class="search"><input id="q" type="search" placeholder="これ持ってる？（名前・作品・キャラで探す）" value="${esc(q)}" aria-label="持ち物を探す"></div>
+  return `<p class="note" style="margin:0 0 8px">全部を登録しなくて大丈夫です。交換に出すものや、重ねて買いやすいものだけで十分です。</p>
+    <div class="tools"><button type="button" data-act="bulk" data-kind="items">まとめて追加</button></div>
+    <div class="search"><input id="q" type="search" placeholder="これ持ってる？（名前・作品・キャラで探す）" value="${esc(q)}" aria-label="持ち物を探す"></div>
     ${q?`<div class="hit">${hits.length?`<b>持っています</b>：${hits.length}件（合計 ${hits.reduce((a,i)=>a+(+i.qty||0),0)}個）`:'<b>見つかりません</b>。まだ持っていない可能性があります。'}</div>`:`<div class="stat"><div>種類 <b>${S.items.length}</b></div><div>合計 <b>${total}</b>個</div><div>譲に出している <b>${S.items.filter(i=>i.give).length}</b></div></div>`}
     ${list.length?`<div class="list">${list.map(card).join('')}</div>`:(q?'':`<div class="empty">持ち物はまだありません。「＋ 追加」で登録できます。</div>`)}`;
 }
@@ -204,7 +212,7 @@ function viewWants(){
     <div class="sub">${esc([w.work,w.chara].filter(Boolean).join(' / '))}${w.note?`・${esc(w.note)}`:''}</div>
     <div class="chips"><span class="chip want">求</span>${have?'<span class="chip ok">持ち物にも同じものがあります</span>':''}${w.sample?'<span class="chip sample">見本</span>':''}</div></div>
     <button type="button" class="small" data-act="editWant" data-id="${w.id}">編集</button></div>`};
-  return `<h2>欲しいもの（求）</h2>${S.wants.length?`<div class="list">${S.wants.map(card).join('')}</div>`:`<div class="empty">欲しいものはまだありません。「＋ 追加」で登録できます。</div>`}`;
+  return `<h2>欲しいもの（求）</h2><div class="tools"><button type="button" data-act="bulk" data-kind="wants">まとめて追加</button></div>${S.wants.length?`<div class="list">${S.wants.map(card).join('')}</div>`:`<div class="empty">欲しいものはまだありません。「＋ 追加」で登録できます。</div>`}`;
 }
 function viewPoster(){
   return `<h2>Xに貼る募集画像</h2>
@@ -272,13 +280,31 @@ function open(html,onSave,onDelete){
   if(ph)ph.onchange=async()=>{if(ph.files[0]){pendingPhoto=await shrink(ph.files[0]);const pv=form.querySelector('.preview-photo');if(pv)pv.src=pendingPhoto}};
   dlg.showModal();
 }
+function pick(target,arr,where){
+  if(!arr.length)return `<p class="note pick">${where}を登録すると、ここからタップで選べます（書いてもOK）。</p>`;
+  return `<div class="chips pick">${arr.slice(0,14).map(x=>{const t=[x.chara,x.name].filter(Boolean).join(' ');return `<button type="button" data-pick="${target}" data-val="${esc(t)}">${esc(t)}</button>`}).join('')}</div>`;
+}
+function bulkAdd(kind){
+  const isItem=kind==='items';
+  open(`<h3>${isItem?'持ち物':'欲しいもの'}をまとめて追加</h3>
+    <p class="note">1行に1つずつ書くか、メモやXの投稿から貼り付けてください。「×2」と書くと個数になります。写真はあとから足せます。</p>
+    <textarea name="lines" id="f-lines" style="min-height:160px" placeholder="缶バッジ 第2弾 キャラA ×2&#10;アクスタ キャラB&#10;ブロマイド くじB賞"></textarea>
+    <div class="two"><label>作品（全部に共通なら）<input name="work" id="f-bwork"></label>
+    ${isItem?'<label class="inline" style="align-self:end"><input type="checkbox" name="give" id="f-bgive" checked>全部を譲に出す</label>':'<span></span>'}</div>`,
+    fd=>{const lines=String(fd.get('lines')||'').split(/\n/).map(l=>l.trim()).filter(Boolean);if(!lines.length)return;leaveSample();
+      for(const l of lines){const m=l.match(/^(.*?)[\s　]*[×xX✕*＊]\s*(\d+)$/);const name=(m?m[1]:l).trim(),qty=m?+m[2]:1;
+        if(isItem)S.items.push({id:uid(),name,work:fd.get('work')||'',chara:'',qty,give:!!fd.get('give'),photo:''});
+        else S.wants.push({id:uid(),name,work:fd.get('work')||'',chara:'',note:qty>1?`${qty}つ`:'',photo:''});}});
+}
 function leaveSample(){if(S.sample){S={items:[],wants:[],deals:[],handle:'',terms:''}}}
 function editDeal(d){
   const isNew=!d;d=d||{method:'郵送',sent:false,received:false};
   open(`<h3>${isNew?'交換の約束を記録':'交換の約束を編集'}</h3>
     <label>相手（Xのアカウント名など）<input name="partner" id="f-partner" required value="${esc(d.partner)}" placeholder="@partner"></label>
-    <label>自分が出すもの<input name="give" id="f-give" required value="${esc(d.give)}"></label>
-    <label>相手からもらうもの<input name="get" id="f-get" required value="${esc(d.get)}"></label>
+    <label>自分が出すもの<input name="give" id="f-give" required value="${esc(d.give)}" placeholder="下から選ぶか、書く"></label>
+    ${pick('f-give',S.items.filter(i=>i.give).concat(S.items.filter(i=>!i.give)),'持ち物')}
+    <label>相手からもらうもの<input name="get" id="f-get" required value="${esc(d.get)}" placeholder="下から選ぶか、書く"></label>
+    ${pick('f-get',S.wants,'求')}
     <div class="two"><label>方法<select name="method" id="f-method"><option ${d.method==='郵送'?'selected':''}>郵送</option><option ${d.method==='手渡し'?'selected':''}>手渡し</option></select></label>
     <label>発送・手渡しの期限<input type="date" name="shipBy" id="f-shipBy" value="${esc(d.shipBy||'')}"></label></div>
     <label>メモ<input name="note" id="f-note" value="${esc(d.note)}" placeholder="例：くじの発送待ち"></label>
@@ -315,6 +341,8 @@ $('#clearSample').onclick=async()=>{S={items:[],wants:[],deals:[],handle:'',term
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,a=b.dataset.act;
   if(a==='sent'||a==='recv'){const d=S.deals.find(x=>x.id===id);if(!d)return;if(a==='sent')d.sent=!d.sent;else d.received=!d.received;await save();render()}
+  if(a==='inc'||a==='dec'){const i=S.items.find(x=>x.id===id);if(!i)return;i.qty=Math.max(0,(+i.qty||0)+(a==='inc'?1:-1));await save();render();return}
+  if(a==='bulk'){bulkAdd(b.dataset.kind);return}
   if(a==='editDeal')editDeal(S.deals.find(x=>x.id===id));
   if(a==='editItem')editItem(S.items.find(x=>x.id===id));
   if(a==='editWant')editWant(S.wants.find(x=>x.id===id));
@@ -323,6 +351,8 @@ document.addEventListener('click',async e=>{
   if(a==='import'){try{const o=JSON.parse($('#importText').value);if(!o||o.app!=='goods-note'||!o.data)throw 0;S=Object.assign({items:[],wants:[],deals:[],handle:'',terms:''},o.data);await save();$('#importText').value='';render();$('#backupMsg').textContent='読み込みました。'}
     catch(_){$('#backupMsg').textContent='読み込めませんでした。書き出したときの文字を、そのまま全部貼り付けてください。'}}
 });
+form.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;const inp=document.getElementById(b.dataset.pick);if(!inp)return;
+  const v=b.dataset.val;inp.value=inp.value.trim()?inp.value.trim()+'、'+v:v;inp.dispatchEvent(new Event('input',{bubbles:true}))});
 document.addEventListener('input',async e=>{
   if(e.target.id==='q'){q=e.target.value;const pos=e.target.selectionStart;render();const el=$('#q');el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}
   if(e.target.id==='handle'||e.target.id==='terms'){S[e.target.id]=e.target.value;clearTimeout(window.__pt);window.__pt=setTimeout(async()=>{await save();drawPoster()},300)}
