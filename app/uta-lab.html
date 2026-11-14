@@ -578,8 +578,10 @@ function takeDone(M){
 }
 function vSing(){
   if(F) return vFirst();
+  if(SG) return vSong();
   var h='';
   if(!K||K.err){
+    h+=vSongTop();
     h+=micNote()+'<section class="sheet"><h2>歌って分析</h2><p>好きな曲の一部を、<b>伴奏なしで10〜20秒</b>歌います。歌い終わると、いま直すところを最大2つ返します。</p>'+(K&&K.err?'<div class="warnbox">'+K.err+'</div>':'')+
       '<div class="row"><button class="btn big" data-act="singGo">録音して分析する</button></div>'+
       '<h3>リズム</h3><div class="row"><button class="btn line'+(S.rhy?' on':'')+'" data-act="rhy">リズムも見る</button>'+(S.rhy?'<label class="note" for="bpm">テンポ</label><input type="number" id="bpm" min="50" max="200" value="'+(S.bpm||90)+'" style="width:5.5em"><button class="btn line" data-act="tap">タップで合わせる</button>':'')+'</div>'+
@@ -1059,6 +1061,10 @@ var TIPS=[
   do:'苦しいフレーズを、ストローをくわえて「うー」で歌います。楽に通ったら、ストローを外して同じ感覚で歌います。',
   why:'ストローで口の中に圧力がたまると、声帯の負担が減ります。その楽な状態で、フレーズの音の動きを先に覚えると、外したときもその調整が残りやすくなります（Titze の半閉鎖声道エクササイズ）。',
   when:'特定のフレーズが苦しいとき。',warn:'ほおが膨らむほど息を入れません。'},
+ {id:'falsettoCheck',p:'high',n:'出ない音は、裏声で出るか確かめる',drill:'falsetto',ev:[['','仕組みは確立された知識']],
+  do:'地声で出ない音を、まず裏声で出してみます。出たら、その音は音域の中にあります。裏声のまま歌い、少しずつ芯を足していきます。裏声でも出なければ、キーを下げます。',
+  why:'地声で出ないのは、多くの場合、地声と裏声の切り替えの問題です。裏声で出る音は、声帯がその高さで振動できるということなので、つなぎ方を練習すれば地声に近い声で出せるようになります。',
+  when:'サビの高い音が地声で出ないとき。',warn:'裏声でも出ない音を押して出そうとすると、喉を痛めます。'},
  {id:'cheek',p:'dark',n:'頬を上げる',ev:[T_AC],
   do:'軽くほほえんで、頬骨を上に上げたまま歌います。目も少し笑う感じで。',
   why:'口の形が変わると、響きの成分が上がり、明るく聞こえます。',
@@ -1202,6 +1208,88 @@ function vTips(){
 }
 function tipsFor(issue){ var p=IMAP[issue]; if(!p) return ''; var l=TIPS.filter(function(t){return t.p===p&&tipRate(t.id)!==-1;}); l.sort(function(a,b){return (tipRate(b.id)===1)-(tipRate(a.id)===1);});
   return '<dt>効くコツ</dt><dd>'+l.slice(0,4).map(function(t){return '<button class="btn line" style="padding:4px 10px;margin:2px 4px 2px 0" data-act="tipOpen" data-v="'+p+'" data-t="'+t.id+'">'+t.n+(tipRate(t.id)===1?'（効いた）':'')+'</button>';}).join('')+'</dd>'; }
+
+/* ---------- 曲練習 ----------
+   1回の流れ：基礎の前半 → フレーズを切り出す → 段階を追って歌詞に近づける → 録音 → 止めずに通す → クールダウン。
+   フレーズは「聞く → リズム読み → ストロー → 1つの音 → 母音 → ゆっくり歌詞 → 元の速さ → 録音」の8段。言葉・音・速さを一度に全部やらず、1つずつ足す */
+var SSTEPS=[
+ {n:'原曲を聞いて、頭の中で歌えるようにする',why:'頭の中でメロディーを鳴らせないと、声に出しても合わせる目標がありません。',how:'原曲のこのフレーズだけを5回聞きます。最後の2回は、声を出さずに頭の中で一緒に歌います。'},
+ {n:'歌詞をリズムどおりに読む',why:'メロディーより先に、言葉のリズムを体に入れます。',how:'メロディーなしで、原曲に合わせて歌詞を読みます。足で拍を踏むとそろいやすくなります。子音は拍の少し前に置きます。'},
+ {n:'ストローか唇ブルブルで通す',why:'喉の負担がいちばん小さい状態で、音の動きを先に覚えます（半閉鎖声道エクササイズ。研究で確かめられている）。',how:'ストローをくわえて「うー」で、または唇をブルブル震わせて、メロディーだけを歌います。高すぎる所は、1オクターブ下でかまいません。'},
+ {n:'1つの音で歌う',why:'歌詞の子音や母音で喉の形が変わる前に、声の出し方を固めます。',how:''},
+ {n:'母音だけで歌う',why:'子音で途切れない、なめらかな線を作ります。',how:'歌詞から子音を抜いて歌います（「きみのこえ」→「いおおえ」）。母音が変わっても、響きの場所を変えません。'},
+ {n:'歌詞で、ゆっくり歌う',why:'1音ずつ正しい高さを確かめる時間を作ります。',how:'半分くらいの速さで、歌詞で歌います。前の段階の楽な出し方が崩れたら、1つ前に戻ります。'},
+ {n:'元の速さで歌う',why:'本番の速さで同じように歌えるかを確かめます。',how:'原曲に合わせて歌います。慣れたら、ガイドの声なしのカラオケ → 伴奏なし、と外していきます（お手本に頼らないため）。'},
+ {n:'録音して聞き比べる',why:'歌っている間の感覚は当てになりません。外から聞いて、直すところを1つだけ決めます。',how:'このフレーズを録音して、原曲と交互に聞きます。「歌って分析」にかけると、直すところとコツが出ます。'}
+];
+var SYL=[['ね','高い所が苦しい・こもる','舌が前に保たれ、明るく通ります。喉の締めつけを防ぎます。'],['ら','なめらかさ・リズム','舌先だけで言葉を作るので、あごが動かず、音がつながります。'],['ん','音程を合わせたい','声が小さく、ずれが聞き取りやすくなります。高い所は「う」に変えます。'],['ぐ','息もれ・芯がない','「グ」で声帯がしっかり閉じます。'],['ま','出だしをそろえたい','唇を閉じてから始まるので、出だしがそろいます。']];
+var NONOTE=[
+ ['flip','裏返る','地声から裏声への切り替わり（換声点）で、段差ができています。裏声では出ているので、音域の中に入っています。','まずその音を裏声のまま歌います。慣れたら「ね」や、泣きそうな声で、少しずつ芯を足します。切り替わりをなめらかにする練習を毎日続けます（数週間〜数か月の単位）。',['octslide','nay','falsetto']],
+ ['breathy','かすれる・息になる','裏声が弱く、声帯が閉じきっていません。','裏声を鍛える練習と、「グッ・グッ・グー」で閉じる感覚を作ります。音量を下げすぎないようにします。',['falsetto','gug']],
+ ['stuck','詰まる・苦しくて止まる','地声のまま、音量で押し上げています。押すほど声帯が固まり、届かなくなります。','その音だけ音量を下げます。「あ」を「お」寄りにします。あごを上げません。ストローで先に通してから、同じ楽さで歌います。',['siren','nay']],
+ ['none','裏声でも出ない','今の音域の外です。','キーを下げます。無理に出そうとすると喉を痛めます。出せる音の上限は、練習で少しずつ広がります（数か月の単位）。',['siren','falsetto']]
+];
+var MARKS=[['V','息つぎ'],['↗','しゃくり'],['〜','ビブラート'],['＞','強く'],['↘','語尾を抜く']];
+var SG=null;
+function songs(){ return S.songs||(S.songs=[]); }
+function song(){ return songs().filter(function(x){return x.id===SG.sid;})[0]; }
+function phr(){ var s=song(); return s&&s.ph.filter(function(x){return x.id===SG.pid;})[0]; }
+function stepsDone(p){ return p.st.filter(Boolean).length; }
+function sCtx(){ var s=song(), p=SG&&SG.pid?phr():null; if(!s) return '';
+  return '【いま曲練習中】曲：'+s.t+'（キー'+(s.key>0?'+':'')+s.key+'）'+(p?'\nフレーズ：「'+p.text+'」\nいまの段階：'+(p.st.indexOf(0)<0?'全部できた':SSTEPS[firstTodo(p)].n)+'（1つの音は「'+p.syl+'」）'+(SG.nn?'\n出ない音の様子：'+NONOTE.filter(function(x){return x[0]===SG.nn;})[0][1]:''):'')+(s.marks?'\n歌詞の印：'+s.marks:''); }
+function firstTodo(p){ var i=p.st.indexOf(0); return i<0?SSTEPS.length-1:i; }
+function vSongTop(){
+  var h='<section class="sheet"><h2>曲練習</h2><p class="note">曲の苦しい所を1〜2フレーズ切り出して、段階を追って歌詞に近づけます。1曲まるごとを何回も歌うより、苦手な所を練習できる回数が増えます。</p>';
+  if(songs().length) h+='<div class="steps">'+songs().map(function(s){var n=s.ph.length,d=s.ph.filter(function(p){return stepsDone(p)===SSTEPS.length;}).length;return '<div class="step"><div class="t"><b>'+esc(s.t)+'</b><small>フレーズ '+n+'（仕上がり '+d+'）・キー '+(s.key>0?'+':'')+s.key+'</small></div><button class="btn sub" data-act="sgOpen" data-v="'+s.id+'">開く</button></div>';}).join('')+'</div>';
+  return h+'<div class="row"><input id="sgNew" type="text" placeholder="曲名" style="flex:1;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)"><button class="btn" data-act="sgAdd">曲を追加</button></div></section>';
+}
+function vSong(){
+  var s=song(); if(!s){ SG=null; return vSing(); }
+  if(SG.nn!=null&&!SG.pid) return vNoNote();
+  if(SG.pid) return vPhrase();
+  var h='<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">曲練習</span><button class="btn line" style="padding:4px 10px" data-act="sgBack">一覧へ</button></div><h2>'+esc(s.t)+'</h2>';
+  h+='<h3>1回の練習の流れ</h3><ol style="margin:0;padding-left:1.4em;font-size:var(--t-s)"><li>基礎のメニューの前半（体・息・ストロー）を5分 <button class="btn line" style="padding:2px 10px" data-act="go" data-v="warm">基礎へ</button></li><li>苦しいフレーズを1〜2つ選んで、下の段階を進める</li><li>録音して原曲と聞き比べる。直すのは1つだけ</li><li>最後に、間違えても止めずに1曲通す</li><li>クールダウン <button class="btn line" style="padding:2px 10px" data-act="dOpen" data-v="cooldown">開く</button></li></ol>';
+  h+='<h3>キー</h3><div class="row"><button class="btn line" data-act="sgKey" data-v="-1">下げる</button><b style="font:600 var(--t-l) var(--f-code);min-width:3em;text-align:center">'+(s.key>0?'+':'')+s.key+'</b><button class="btn line" data-act="sgKey" data-v="1">上げる</button></div><p class="note">カラオケのキー変更の数です。苦しいキーのまま練習すると喉を締める癖がつくので、楽に歌える所まで下げます。正しい出し方ができたら、少しずつ上げます。'+(S.range?'あなたの音域：'+nname(S.range.lo)+'〜'+nname(S.range.hi)+'。':'')+'</p>';
+  h+='<h3>フレーズ</h3>'+(s.ph.length?'<div class="steps">'+s.ph.map(function(p){var d=stepsDone(p);return '<div class="step"><div class="t"><b>'+esc(p.text)+'</b><small>'+(d===SSTEPS.length?'仕上がり':'段階 '+(firstTodo(p)+1)+' / '+SSTEPS.length+'：'+SSTEPS[firstTodo(p)].n)+'</small></div><button class="btn sub" data-act="phOpen" data-v="'+p.id+'">練習</button></div>';}).join('')+'</div>':'<p class="note">苦しい所の歌詞を、1フレーズずつ追加します。</p>')+
+    '<div class="row"><input id="phNew" type="text" placeholder="フレーズの歌詞" style="flex:1;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)"><button class="btn" data-act="phAdd">追加</button></div>';
+  h+='<h3>出ない音がある</h3><div class="row"><button class="btn line" data-act="nnOpen">出ない音の対処</button></div>';
+  h+='<h3>歌詞の印</h3><p class="note">歌詞を貼り、息つぎや表現の場所に印をつけます。毎回ばらばらにならず、決めた通りに歌えます。</p><div class="row">'+MARKS.map(function(m){return '<button class="btn line" style="padding:4px 10px" data-act="mkIns" data-v="'+m[0]+'">'+m[0]+' '+m[1]+'</button>';}).join('')+'</div><textarea id="marks" style="min-height:140px">'+esc(s.marks||'')+'</textarea><div class="row"><button class="btn sub" data-act="mkSave">印を保存</button></div>';
+  h+='<h3>止めずに通す</h3><p class="note">本番は止められません。練習の最後に1回、間違えても止めずに通します。</p><div class="row"><button class="btn" data-act="sgRun">止めずに通した</button><span class="note">'+(s.runs.length?'これまで '+s.runs.length+'回（最後：'+s.runs[s.runs.length-1].slice(5)+'）':'まだ')+'</span></div>';
+  h+='<details><summary>曲の練習で使える定番のやり方</summary><div><ul><li><b>1オクターブ下で歌う：</b>高くて届かない所を、まず1オクターブ下でメロディーだけ覚えます。</li><li><b>後ろから練習する：</b>フレーズの最後の数語から練習し、1語ずつ前に足します。崩れやすい終わりが安定します。</li><li><b>歌手をまねる：</b>1フレーズを、息つぎ・しゃくり・語尾までそっくりまねます。技術を盗めます。</li><li><b>小さい声で覚える：</b>覚える段階は半分の声で。喉を疲れさせずに回数を増やせます。</li><li><b>頭の中だけで歌う：</b>喉を休める日の練習になります（イメージ練習の効果は研究で確かめられている）。</li><li><b>立って歌う・動画で見る：</b>あごや肩の癖は、自分では気づけません。</li><li><b>採点の音程バーを見ない回を作る：</b>画面のない本番でも合わせられるようにします。</li></ul></div></details>';
+  return h+'<div class="row"><button class="btn line" data-act="sgDel">この曲を消す</button>'+(SG.del?'<button class="btn" style="background:var(--bad)" data-act="sgDelYes">本当に消す</button>':'')+'</div></section>'+vAsk('song:'+s.id,sCtx,'s');
+}
+function vPhrase(){
+  var s=song(), p=phr(); if(!p){ SG.pid=null; return vSong(); }
+  var cur=SG.step!=null?SG.step:firstTodo(p);
+  var h='<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">'+esc(s.t)+'</span><button class="btn line" style="padding:4px 10px" data-act="phBack">曲へ</button></div><h2>「'+esc(p.text)+'」</h2><div class="steps">';
+  SSTEPS.forEach(function(st,i){
+    var on=i===cur;
+    h+='<div class="step" style="flex-direction:column;align-items:stretch;'+(on?'border-color:var(--accent)':'')+'"><div class="row" style="justify-content:space-between"><div class="t"><b>'+(i+1)+'. '+(i===3?'「'+p.syl+'」で歌う':st.n)+'</b></div>'+(p.st[i]?'<span class="tag">できた</span>':'')+(on?'':'<button class="btn line" style="padding:2px 10px" data-act="phStep" data-v="'+i+'">開く</button>')+'</div>';
+    if(on){
+      if(i===3){ var sy=SYL.filter(function(x){return x[0]===p.syl;})[0]; h+='<div class="row">'+SYL.map(function(x){return '<button class="btn line'+(p.syl===x[0]?' on':'')+'" style="padding:4px 10px" data-act="phSyl" data-v="'+x[0]+'">「'+x[0]+'」'+x[1]+'</button>';}).join('')+'</div><p style="font-size:var(--t-s)">メロディーを全部「'+p.syl+'」で歌います。'+sy[2]+'</p>'; }
+      else h+='<p style="font-size:var(--t-s)">'+st.how+'</p>';
+      h+='<p class="note">なぜ：'+st.why+'</p>';
+      if(i===7) h+='<div class="row"><button class="btn sub" data-act="go" data-v="sing">歌って分析へ</button></div>';
+      h+='<div class="row"><button class="btn" data-act="phDone" data-v="'+i+'">できた</button><button class="btn line" data-act="phNot" data-v="'+i+'">うまくいかない</button></div>';
+      if(SG.help===i){
+        h+='<div class="why"><b>うまくいかないとき</b>'+(i===0?'もっと短く区切ります。1〜2語ずつ聞いて、頭の中で鳴らせるまで繰り返します。':i===1?'速さを落として読みます。足の拍を先に安定させてから、言葉を乗せます。':'1つ前の段階に戻ります。'+(i>=2?'高くて出ない音がある場合は、下の「出ない音の対処」を見ます。キーを下げる、1オクターブ下で歌う、も使えます。':''))+'</div>'+(i>=2?'<div class="row"><button class="btn line" data-act="nnOpen">出ない音の対処</button>'+(i>0?'<button class="btn line" data-act="phStep" data-v="'+(i-1)+'">1つ前に戻る</button>':'')+'</div>':'');
+      }
+    }
+    h+='</div>';
+  });
+  h+='</div>'+(stepsDone(p)===SSTEPS.length?'<p class="c-ok"><b>このフレーズは仕上がりました。</b>曲を通して歌うときに、同じように歌えるか確かめます。</p>':'')+'</section>';
+  if(SG.nn!=null) h+=vNoNoteBody();
+  return h+vAsk('ph:'+p.id,sCtx,'s');
+}
+function vNoNoteBody(){
+  var h='<section class="sheet"><h2>出ない音の対処</h2><p class="note">どう出ないかで、原因と対処が変わります。ハミングは出る範囲の音を楽にする練習で、出ない音を出せるようにはしません。</p><div class="row">'+NONOTE.map(function(x){return '<button class="btn line'+(SG.nn===x[0]?' on':'')+'" data-act="nnPick" data-v="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
+  var x=NONOTE.filter(function(z){return z[0]===SG.nn;})[0];
+  if(x) h+='<dl class="kv"><dt>何が起きているか</dt><dd>'+x[2]+'</dd><dt>対処</dt><dd>'+x[3]+'</dd><dt>練習</dt><dd>'+x[4].map(function(id){return '<button class="btn line" style="padding:4px 10px;margin:2px 4px 2px 0" data-act="dOpen" data-v="'+id+'">'+DRI[id].n+'</button>';}).join('')+'</dd></dl>';
+  h+='<p class="note">地声で出る高さは、練習で少しずつ広がりますが、数週間〜数か月の単位です。裏声でも出ない音を押して出そうとすると、喉を痛めます。高い音は、口を閉じるハミングより、ストロー・唇ブルブル・「う」のほうが楽に通りやすいです。</p><div class="row"><button class="btn line" data-act="nnClose">閉じる</button></div>';
+  return h+'</section>';
+}
+function vNoNote(){ return '<section class="sheet"><div class="row" style="justify-content:space-between"><span class="code">'+esc(song().t)+'</span><button class="btn line" style="padding:4px 10px" data-act="nnClose">曲へ</button></div></section>'+vNoNoteBody()+vAsk('nn:'+SG.sid,sCtx,'s'); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 /* ---------- 音域 ---------- */
 function vRange(){
@@ -1503,6 +1591,25 @@ var ACT={
     var done=function(){CH.err='コピーしました。Claudeとの会話に貼り付けてください。';render();};
     if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,function(){var el=document.getElementById('sum'); if(el){el.hidden=false;el.value=txt;el.select();} CH.err='自動でコピーできませんでした。表示された文面を選んでコピーしてください。';});
     else { var el=document.getElementById('sum'); if(el){el.hidden=false;el.value=txt;el.select();} }},
+  sgAdd:function(){var el=document.getElementById('sgNew'),t=el&&el.value.trim(); if(!t) return; var x={id:uid(),t:t,key:0,ph:[],runs:[],marks:''}; songs().push(x); save(); SG={sid:x.id}; render(); window.scrollTo(0,0);},
+  sgOpen:function(d){SG={sid:d.v};render();window.scrollTo(0,0);},
+  sgBack:function(){SG=null;render();window.scrollTo(0,0);},
+  sgKey:function(d){var x=song(); x.key=Math.max(-12,Math.min(12,x.key+(+d.v))); save(); var y=window.scrollY; render(); window.scrollTo(0,y);},
+  sgRun:function(){song().runs.push(today()); save(); var y=window.scrollY; render(); window.scrollTo(0,y);},
+  sgDel:function(){SG.del=true;render();},
+  sgDelYes:function(){S.songs=songs().filter(function(x){return x.id!==SG.sid;}); save(); SG=null; render();},
+  phAdd:function(){var el=document.getElementById('phNew'),t=el&&el.value.trim(); if(!t) return; song().ph.push({id:uid(),text:t,syl:'ね',st:[0,0,0,0,0,0,0,0]}); save(); var y=window.scrollY; render(); window.scrollTo(0,y);},
+  phOpen:function(d){SG.pid=d.v; SG.step=null; SG.help=null; SG.nn=null; render(); window.scrollTo(0,0);},
+  phBack:function(){SG.pid=null; SG.nn=null; render(); window.scrollTo(0,0);},
+  phStep:function(d){SG.step=+d.v; SG.help=null; render();},
+  phSyl:function(d){phr().syl=d.v; save(); render();},
+  phDone:function(d){var p=phr(); p.st[+d.v]=1; save(); SG.help=null; SG.step=null; render();},
+  phNot:function(d){SG.help=+d.v; render();},
+  nnOpen:function(){SG.nn=SG.nn||'';  render(); var e=document.querySelector('[data-act=nnPick]'); if(e) e.scrollIntoView({block:'center'});},
+  nnPick:function(d){SG.nn=d.v; var y=window.scrollY; render(); window.scrollTo(0,y);},
+  nnClose:function(){SG.nn=null; render();},
+  mkIns:function(d){var t=document.getElementById('marks'); if(!t) return; var a=t.selectionStart||0; t.value=t.value.slice(0,a)+d.v+t.value.slice(t.selectionEnd||a); t.focus(); t.selectionStart=t.selectionEnd=a+d.v.length;},
+  mkSave:function(){var t=document.getElementById('marks'); song().marks=t?t.value:''; save(); CH.err=''; var y=window.scrollY; render(); window.scrollTo(0,y);},
   tipProb:function(d){TP=d.v;render();},
   tipOpen:function(d){stopAll();TP=d.v;L=null;RV=null;tab='learn';render();var el=document.querySelector('[data-act=tipRate][data-v='+d.t+']');if(el){var dt=el.closest('details');if(dt){dt.open=true;dt.scrollIntoView({block:'start'});}}else window.scrollTo(0,0);},
   tipRate:function(d){if(!S.tips)S.tips={};S.tips[d.v]={r:+d.r,d:today()};save();var y=window.scrollY;render();window.scrollTo(0,y);},
@@ -1515,7 +1622,7 @@ var ACT={
   copy:function(){var el=document.getElementById('sum'); if(!el) return; var done=function(){CH.err='コピーしました。Claudeとの会話に貼り付けてください。';render();}; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).then(done,function(){el.select();}); else el.select();},
   wipe:function(){wipe=true;render();},
   wipeNo:function(){wipe=false;render();},
-  wipeYes:function(){K=null;L=null;RV=null;F=null;D=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
+  wipeYes:function(){K=null;L=null;RV=null;F=null;D=null;SG=null;S={range:null,stage:1,pattern:'single',sets:[],days:{},est:[],takes:[]};save();wipe=false;T=null;SET=null;R=null;W=null;render();}
 };
 document.addEventListener('click',function(e){
   var t=e.target.closest('[data-tab]'); if(t){ stopAll(); recStop(); if(K&&K.phase!=='result') K=null; if(L) L.run=null; if(D&&D.phase==='run'){D.phase='intro';D.E=null;} if(F&&F.phase!=='sum'&&F.phase!=='res'&&F.phase!=='ready') F.phase=S.firstT&&F.reps.length?'ready':'set'; W=null; if(T&&T.phase!=='result') {T=null; if(SET&&!SET.done&&!SET.n) SET=null;} if(R&&R.phase==='run') R=S.range?null:{}; tab=t.dataset.tab; wipe=false; render(); window.scrollTo(0,0); return; }
@@ -1537,10 +1644,11 @@ function fCtx(){ if(!F) return ''; var r=F.reps||[]; return '【いま練習中�
 function pCtx(){ return '【いま練習中】音程の練習（お手本の音を聞いて同じ高さで歌う。表示の段階'+S.stage+'：'+STAGE[S.stage][0]+'、音の数：'+PAT[S.pattern].name+'）'+(T&&T.res&&T.res.heard?'。直前の結果：出だし'+sgn(T.res.onset)+'セント、伸ばしている間'+sgn(T.res.sustain)+'セント、ぶれ'+Math.round(T.res.wob)+'セント':''); }
 var QUICK=['できているか分からない','喉が痛い・違和感がある','うまくできない','なぜこれをやるの？'];
 function faq(q,kind){
-  var x=kind==='d'&&D?DRI[D.id]:null, tp=x?CAT2TIP[x.c]:kind==='f'?'onset':'pitch', tips=TIPS.filter(function(t){return t.p===tp;}).slice(0,3).map(function(t){return '「'+t.n+'」';}).join('、');
+  var x=kind==='d'&&D?DRI[D.id]:null, tp=x?CAT2TIP[x.c]:kind==='f'?'onset':kind==='s'?'high':'pitch', tips=TIPS.filter(function(t){return t.p===tp;}).slice(0,3).map(function(t){return '「'+t.n+'」';}).join('、');
   if(q===QUICK[0]) return (x&&x.chk.length?'この練習の確かめ項目は「'+x.chk.join('」「')+'」です。1つずつ、できたかどうかを見ます。':'')+(x&&x.met||kind!=='d'?'マイクが使える開き方なら、数字でも確かめられます。':'')+'いちばん確かなのは録音です。やる前とやった後で同じフレーズを録り、聞き比べます。歌っている最中の自分の声は、骨を通っても聞こえるので、感覚だけでは判断できません。';
   if(q===QUICK[1]) return 'すぐにやめます。'+(x&&x.over?'この練習でありがちなのは「'+x.over+'」です。':'')+'水を飲み、その日は「ストローでサイレン」を小さな声で1分だけにするか、声を休めます。痛みやかすれが2週間以上続くときは、耳鼻咽喉科で診てもらってください。';
   if(q===QUICK[2]) return (x&&x.lv.length>1&&D.lv>1?'1つ前の段階に戻します。':'')+'音量を下げる、速さを落とす、時間を短くする、のどれかで、できる大きさまで小さくします。'+(x&&x.cue?'イメージ「'+x.cue+'」も使います。':'')+'コツ図鑑の'+tips+'も試せます。上達は、少しだけ難しいことを繰り返すときにいちばん進みます。できない日があって当然です。';
+  if(q===QUICK[3]&&kind==='s') return '歌詞の子音や母音で、喉の形は毎回変わります。言葉・音・速さを一度に全部やろうとせず、楽な出し方でメロディーを先に固めてから、母音、歌詞、元の速さと1つずつ足していくためです。';
   if(q===QUICK[3]) return x?x.why+(x.how?' '+x.how:''):kind==='f'?'一声目で上手いと感じさせる4つ（出だし・音程・芯・響き）を、毎回同時に出せるようにする練習です。人前で、考えなくても同じように入れるようにするため、毎回同じ手順を踏みます。':'聞いた音を声に変える対応づけを正確にする練習です。音程が外れる人の多くは、耳ではなく、ここがずれています。表示を減らしていくのは、表示のない本番でも合わせられるようにするためです（運動学習のガイダンス仮説）。';
   return '';
 }
