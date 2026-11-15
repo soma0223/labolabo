@@ -1,19 +1,19 @@
 <title>グッズ交換ノート</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap">
 <style>
-/* Layout: iPhone標準の作り（大見出し・角丸のまとまりの一覧・下のタブ・下から出る入力画面）。色は「推し色」1色だけ */
+/* Layout: iPhone標準の作り（大見出し・角丸のまとまりの一覧・下のタブ・下から出る入力画面）。色は推し色1色から、背景・線・見出しをすべて作る。あえて明るい1テーマ */
 :root{
   --oshi:#e8457c;
-  --bg:#f2f2f7; --group:#ffffff; --fg:#000000; --sub:#6d6d72; --sep:rgba(60,60,67,.18); --fill:rgba(118,118,128,.12);
-  --bar:rgba(249,249,249,.86); --late:#ff3b30; --wait:#ff9500; --ok:#34c759;
+  --bg:color-mix(in srgb,var(--oshi) 8%,#fffafc); --group:#ffffff; --fg:#3b3040; --sub:#8c8192;
+  --sep:color-mix(in srgb,var(--oshi) 14%,#ece7ef); --fill:color-mix(in srgb,var(--oshi) 11%,#f6f3f8);
+  --deep:color-mix(in srgb,var(--oshi) 80%,#3b3040); --bar:rgba(255,255,255,.84);
+  --late:#ef4b5a; --wait:#f29d38; --ok:#3cbf86; --shadow:0 1px 3px color-mix(in srgb,var(--oshi) 12%,transparent);
   --f:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+  --round:"Zen Maru Gothic","Hiragino Maru Gothic ProN",-apple-system,"Hiragino Sans",sans-serif;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#000000; --group:#1c1c1e; --fg:#ffffff; --sub:#8e8e93; --sep:rgba(84,84,88,.6); --fill:rgba(118,118,128,.24);
-  --bar:rgba(22,22,24,.86); --late:#ff453a; --wait:#ff9f0a; --ok:#30d158; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#000000; --group:#1c1c1e; --fg:#ffffff; --sub:#8e8e93; --sep:rgba(84,84,88,.6); --fill:rgba(118,118,128,.24);
-  --bar:rgba(22,22,24,.86); --late:#ff453a; --wait:#ff9f0a; --ok:#30d158; color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -24,10 +24,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .top{display:flex;justify-content:flex-end;align-items:center;height:44px}
 .iconbtn{border:none;background:none;color:var(--oshi);padding:8px;margin-right:-8px;display:grid;place-items:center;cursor:pointer;border-radius:10px}
 .iconbtn svg{width:26px;height:26px}
-h1{font-size:34px;font-weight:700;letter-spacing:.01em;margin:0 0 14px;line-height:1.15}
+h1{font-family:var(--round);color:var(--deep);font-size:32px;font-weight:700;letter-spacing:.01em;margin:0 0 14px;line-height:1.15}
 .caption{font-size:13px;color:var(--sub);text-transform:none;margin:22px 16px 7px}
 .foot{font-size:13px;color:var(--sub);margin:7px 16px 0;line-height:1.45}
-.group{background:var(--group);border-radius:12px;overflow:hidden}
+.group{background:var(--group);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
 .cell{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;position:relative;width:100%;text-align:left;
   background:none;border:none;color:inherit;font:inherit;cursor:pointer}
 .cell+.cell::before{content:"";position:absolute;top:0;right:0;left:var(--inset,16px);border-top:.5px solid var(--sep)}
@@ -62,14 +62,14 @@ h1{font-size:34px;font-weight:700;letter-spacing:.01em;margin:0 0 14px;line-heig
 .summary div{padding:12px 16px}
 .summary div+div{border-left:.5px solid var(--sep)}
 .summary small{display:block;font-size:12px;color:var(--sub)}
-.summary b{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.summary b{font-family:var(--round);color:var(--deep);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .summary b.late{color:var(--late)}
 .stepper{display:inline-flex;align-items:center;background:var(--fill);border-radius:8px;overflow:hidden;flex:none}
 .stepper button{border:none;background:none;color:var(--fg);font:inherit;font-size:20px;width:36px;height:30px;cursor:pointer}
 .stepper span{min-width:34px;text-align:center;font-size:15px;font-variant-numeric:tabular-nums;border-inline:.5px solid var(--sep);line-height:30px}
 .linkcell{color:var(--oshi)}
 .empty{padding:28px 16px;text-align:center;color:var(--sub);font-size:15px;line-height:1.5}
-.sample{background:var(--group);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:15px}
+.sample{background:var(--group);box-shadow:var(--shadow);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:15px}
 .sample span{flex:1;color:var(--sub)}
 .sample button{font:inherit;font-size:15px;border:none;background:none;color:var(--oshi);cursor:pointer;font-weight:600;padding:4px 0}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep);
@@ -85,7 +85,7 @@ dialog[open]{animation:up .28s cubic-bezier(.2,.8,.2,1)}
 @media (prefers-reduced-motion:reduce){dialog[open]{animation:none}}
 dialog::backdrop{background:rgba(0,0,0,.4)}
 .sheetbar{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:52px;padding:0 16px;background:var(--bg);border-bottom:.5px solid var(--sep)}
-.sheetbar h3{margin:0;font-size:17px;font-weight:600}
+.sheetbar h3{margin:0;font-family:var(--round);color:var(--deep);font-size:17px;font-weight:700}
 .sheetbar button{font:inherit;font-size:17px;border:none;background:none;color:var(--oshi);cursor:pointer;padding:6px 0}
 .sheetbar .save{justify-self:end;font-weight:600}
 .sheetbar .cancel{justify-self:start}
@@ -112,8 +112,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .colors{display:flex;flex-wrap:wrap;gap:12px;padding:14px 16px}
 .colors button{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;position:relative}
 .colors button[aria-pressed="true"]::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2.5px solid var(--fg)}
-.poster{width:100%;border-radius:12px;display:block;background:var(--group)}
-textarea.plain{width:100%;border:none;background:var(--group);border-radius:12px;font:inherit;font-size:14px;color:var(--fg);padding:12px 14px;min-height:96px;resize:vertical}
+.poster{width:100%;border-radius:16px;box-shadow:var(--shadow);display:block;background:var(--group)}
+textarea.plain{width:100%;border:none;background:var(--group);box-shadow:var(--shadow);border-radius:16px;font:inherit;font-size:14px;color:var(--fg);padding:12px 14px;min-height:96px;resize:vertical}
 :focus-visible{outline:2px solid var(--oshi);outline-offset:2px}
 </style>
 
@@ -276,31 +276,33 @@ function loadImg(src){return new Promise(r=>{if(!src)return r(null);const i=new 
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 async function drawPoster(){
   const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-  const F='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif', oshi=S.oshi||OSHI[0];
-  g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
-  g.fillStyle=oshi;g.fillRect(0,0,W,14);
-  g.fillStyle='#111';g.font=`700 64px ${F}`;g.fillText('交換募集',64,120);
+  const F='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif', R='"Zen Maru Gothic","Hiragino Maru Gothic ProN",'+F, oshi=S.oshi||OSHI[0];
+  const mix=(a,b,t)=>{const h=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16));const A=h(a),B=h(b);return '#'+A.map((v,i)=>Math.round(v*t+B[i]*(1-t)).toString(16).padStart(2,'0')).join('')};
+  const paper=mix(oshi,'#ffffff',.08), tile=mix(oshi,'#ffffff',.14), deep=mix(oshi,'#3b3040',.8), ink='#3b3040';
+  g.fillStyle=paper;g.fillRect(0,0,W,H);
+  g.fillStyle='#ffffff';rr(g,32,32,W-64,H-64,40);g.fill();
+  g.fillStyle=deep;g.font=`700 64px ${R}`;g.fillText('交換募集',64,130);
   g.fillStyle='#6d6d72';g.font=`500 32px ${F}`;g.fillText(S.handle||'',64,170);
   async function block(title,arr,y0,y1){
-    g.fillStyle=title==='譲'?oshi:'#111';rr(g,64,y0,96,52,14);g.fill();
-    g.fillStyle='#fff';g.font=`700 30px ${F}`;g.fillText(title,96,y0+37);
+    g.fillStyle=title==='譲'?oshi:mix(oshi,'#ffffff',.25);rr(g,64,y0,96,52,26);g.fill();
+    g.fillStyle=title==='譲'?'#fff':deep;g.font=`700 30px ${F}`;g.fillText(title,96,y0+37);
     g.fillStyle='#6d6d72';g.font=`500 26px ${F}`;g.fillText(`${arr.length}件`,178,y0+36);
     const cols=4,gap=20,cw=(W-128-gap*(cols-1))/cols,ch=cw+56;const y=y0+76;
     for(let k=0;k<Math.min(arr.length,8);k++){
       const it=arr[k],x=64+(k%cols)*(cw+gap),yy=y+Math.floor(k/cols)*ch;if(yy+ch>y1)break;
-      g.fillStyle='#f2f2f7';rr(g,x,yy,cw,cw,20);g.fill();
+      g.fillStyle=tile;rr(g,x,yy,cw,cw,24);g.fill();
       const im=await loadImg(it.photo);
-      if(im){g.save();rr(g,x,yy,cw,cw,20);g.clip();const s=Math.max(cw/im.width,cw/im.height);g.drawImage(im,x+(cw-im.width*s)/2,yy+(cw-im.height*s)/2,im.width*s,im.height*s);g.restore()}
+      if(im){g.save();rr(g,x,yy,cw,cw,24);g.clip();const s=Math.max(cw/im.width,cw/im.height);g.drawImage(im,x+(cw-im.width*s)/2,yy+(cw-im.height*s)/2,im.width*s,im.height*s);g.restore()}
       else{g.fillStyle='#c7c7cc';g.font=`600 24px ${F}`;g.textAlign='center';g.fillText('No Photo',x+cw/2,yy+cw/2+8);g.textAlign='left'}
-      g.fillStyle='#111';g.font=`600 23px ${F}`;const t=label(it);g.fillText(t.length>10?t.slice(0,9)+'…':t,x+2,yy+cw+34);
+      g.fillStyle=ink;g.font=`600 23px ${F}`;const t=label(it);g.fillText(t.length>10?t.slice(0,9)+'…':t,x+2,yy+cw+34);
     }
     if(!arr.length){g.fillStyle='#c7c7cc';g.font=`500 28px ${F}`;g.fillText('なし',64,y+44)}
     if(arr.length>8){g.fillStyle='#6d6d72';g.font=`500 24px ${F}`;g.textAlign='right';g.fillText(`ほか${arr.length-8}件`,W-64,y0+36);g.textAlign='left'}
   }
   await block('譲',S.items.filter(i=>i.give),210,720);
   await block('求',S.wants,740,1230);
-  g.fillStyle='#e5e5ea';g.fillRect(64,1250,W-128,2);
-  g.fillStyle='#111';g.font=`500 28px ${F}`;g.fillText(S.terms||'',64,1300);
+  g.fillStyle=tile;g.fillRect(64,1250,W-128,3);
+  g.fillStyle=ink;g.font=`500 28px ${F}`;g.fillText(S.terms||'',64,1300);
   const img=$('#posterImg');if(img)img.src=c.toDataURL('image/png');
 }
 
