@@ -13,6 +13,7 @@
 | `app/jibun-lab-v2.html` | v2 の試作（設計メモ11章の設計を実装。claude.ai の Artifact：https://claude.ai/artifact/AmPybGnd6Afc9iFomnbtMH） |
 | `app/jibun-lab-v3.html` | v3 の試作（設計メモ12章の再構築を実装。claude.ai の Artifact：https://claude.ai/artifact/1w4D4sgLbWMjmUnktqqrSp） |
 | `tools/q12-form.gs` | 周りの就活生への聞き取り（Q12）のGoogleフォームを作る Apps Script |
+| `startup/` | **ジブンラボとは別の企画**（起業：推し活アプリ）。起業の話をするときは、**最初に `startup/playbook.md`（起業と経営の操作的定義。すべての提案の土台）と `startup/README.md` を読む**。提案は playbook 4章の点検を通してから出す |
 
 元の claude.ai 上の文書（ここに書き出したものと同じ内容）：
 - 設計メモ：https://claude.ai/artifact/Jy7r1s7eX6b3ePA4uHWYRr
